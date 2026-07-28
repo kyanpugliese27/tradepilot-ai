@@ -1,0 +1,9 @@
+{
+  "name": "TradePilot AI",
+  "short_name": "TradePilot",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#06100b",
+  "theme_color": "#06100b",
+  "description": "AI-powered investing research and education."
+}
