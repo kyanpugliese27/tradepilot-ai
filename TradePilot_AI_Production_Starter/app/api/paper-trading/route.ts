@@ -5,7 +5,7 @@ import {
   getPaperPortfolio,
   resetPaperPortfolio,
   sellStock,
-} from "@/lib/paperTrading";
+} from  "@/lib/supabase/paperTrading";
 
 export const dynamic = "force-dynamic";
 
