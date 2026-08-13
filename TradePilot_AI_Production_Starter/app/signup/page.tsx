@@ -1,106 +1,446 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import {
+  useEffect,
+  useState,
+} from "react";
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
 
-export default function SignupPage() {
-  const router = useRouter();
+function getSafeNextPath(
+  value: string | null
+) {
+  if (!value) {
+    return "/dashboard";
+  }
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  if (
+    !value.startsWith("/") ||
+    value.startsWith("//")
+  ) {
+    return "/dashboard";
+  }
+
+  if (
+    value === "/login" ||
+    value.startsWith("/login?") ||
+    value === "/signup" ||
+    value.startsWith("/signup?") ||
+    value === "/forgot-password" ||
+    value.startsWith(
+      "/forgot-password?"
+    )
+  ) {
+    return "/dashboard";
+  }
+
+  return value;
+}
+
+export default function SignupPage() {
+  const router =
+    useRouter();
+
+  const searchParams =
+    useSearchParams();
+
+  const nextPath =
+    getSafeNextPath(
+      searchParams.get("next")
+    );
+
+  const loginHref =
+    nextPath === "/dashboard"
+      ? "/login"
+      : `/login?next=${encodeURIComponent(
+          nextPath
+        )}`;
+
+  const [email, setEmail] =
+    useState("");
+
+  const [password, setPassword] =
+    useState("");
+
+  const [
+    confirmPassword,
+    setConfirmPassword,
+  ] = useState("");
+
+  const [
+    referralCode,
+    setReferralCode,
+  ] = useState("");
+
+  const [message, setMessage] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  useEffect(() => {
+    const code =
+      searchParams
+        .get("ref")
+        ?.trim()
+        .toUpperCase() ||
+      "";
+
+    if (code) {
+      setReferralCode(code);
+
+      localStorage.setItem(
+        "tradepilot_referral",
+        code
+      );
+    } else {
+      const savedCode =
+        localStorage.getItem(
+          "tradepilot_referral"
+        );
+
+      if (savedCode) {
+        setReferralCode(
+          savedCode
+            .trim()
+            .toUpperCase()
+        );
+      }
+    }
+  }, [searchParams]);
 
   async function submit() {
     setMessage("");
 
-    if (!email || !password || !confirmPassword) {
-      setMessage("Please fill in every field.");
+    if (
+      !email.trim() ||
+      !password ||
+      !confirmPassword
+    ) {
+      setMessage(
+        "Please fill in every field."
+      );
+
       return;
     }
 
-    if (password !== confirmPassword) {
-      setMessage("Passwords do not match.");
+    if (
+      password !==
+      confirmPassword
+    ) {
+      setMessage(
+        "Passwords do not match."
+      );
+
       return;
     }
 
-    if (password.length < 6) {
-      setMessage("Password must be at least 6 characters.");
+    if (
+      password.length < 6
+    ) {
+      setMessage(
+        "Password must be at least 6 characters."
+      );
+
       return;
     }
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const url =
+      process.env
+        .NEXT_PUBLIC_SUPABASE_URL;
+
+    const key =
+      process.env
+        .NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!url || !key) {
-      setMessage("Supabase is not connected.");
+      setMessage(
+        "Supabase is not connected."
+      );
+
       return;
     }
 
     setLoading(true);
 
-    const supabase = createBrowserClient(url, key);
+    try {
+      const supabase =
+        createBrowserClient(
+          url,
+          key
+        );
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+      const savedReferral =
+        referralCode ||
+        localStorage.getItem(
+          "tradepilot_referral"
+        ) ||
+        "";
 
-    if (error) {
-      setMessage(error.message);
+      const {
+        data,
+        error,
+      } =
+        await supabase.auth.signUp(
+          {
+            email:
+              email
+                .trim()
+                .toLowerCase(),
+
+            password,
+
+            options: {
+              data: {
+                referral_code:
+                  savedReferral
+                    .trim()
+                    .toUpperCase() ||
+                  null,
+              },
+            },
+          }
+        );
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data.user) {
+        throw new Error(
+          "Account could not be created."
+        );
+      }
+
+      localStorage.removeItem(
+        "tradepilot_referral"
+      );
+
+      /*
+       * If Supabase returns a session immediately,
+       * email confirmation is not required.
+       * Send the user directly where they intended
+       * to go.
+       */
+      if (data.session) {
+        setMessage(
+          nextPath ===
+            "/dashboard"
+            ? "Account created. Opening your dashboard..."
+            : "Account created. Taking you back..."
+        );
+
+        window.setTimeout(
+          () => {
+            router.replace(
+              nextPath
+            );
+
+            router.refresh();
+          },
+          700
+        );
+
+        return;
+      }
+
+      /*
+       * If email confirmation is required,
+       * send the user to login while preserving
+       * the original destination.
+       */
+      setMessage(
+        "Account created. Check your email if confirmation is required."
+      );
+
+      window.setTimeout(
+        () => {
+          router.replace(
+            loginHref
+          );
+        },
+        1200
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to create your account."
+      );
+
       setLoading(false);
-      return;
     }
-
-    setMessage("Account created. Check your email if confirmation is required.");
-
-    setTimeout(() => {
-      router.push("/login");
-    }, 1200);
   }
 
   return (
     <main className="shell">
       <div className="form card">
         <div className="brand">
-          TradePilot <span>AI</span>
+          TradePilot{" "}
+          <span>AI</span>
         </div>
 
-        <h1>Create your account</h1>
+        <h1>
+          Create your account
+        </h1>
 
-        <label>Email</label>
+        <p className="muted">
+          {nextPath ===
+          "/dashboard"
+            ? "Create an account to get started."
+            : "Create an account to continue where you left off."}
+        </p>
+
+        {referralCode && (
+          <div
+            style={{
+              marginBottom: 16,
+              padding:
+                "11px 12px",
+              border:
+                "1px solid rgba(96,165,250,0.2)",
+              borderRadius: 10,
+              background:
+                "rgba(37,99,235,0.06)",
+            }}
+          >
+            <div
+              style={{
+                color:
+                  "#93c5fd",
+                fontSize: 10,
+                fontWeight: 800,
+              }}
+            >
+              👥 Referral applied
+            </div>
+
+            <div
+              style={{
+                marginTop: 4,
+                color:
+                  "#d1d5db",
+                fontSize: 11,
+              }}
+            >
+              Code:{" "}
+              <strong>
+                {
+                  referralCode
+                }
+              </strong>
+            </div>
+          </div>
+        )}
+
+        {nextPath !==
+          "/dashboard" && (
+          <div
+            style={{
+              marginBottom: 16,
+              padding:
+                "10px 12px",
+              border:
+                "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 10,
+              background:
+                "rgba(255,255,255,0.025)",
+              color:
+                "#9ca3af",
+              fontSize: 10,
+              lineHeight: 1.5,
+            }}
+          >
+            After signup,
+            TradePilot will
+            continue to{" "}
+            <strong
+              style={{
+                color:
+                  "#d1d5db",
+              }}
+            >
+              {nextPath}
+            </strong>
+            .
+          </div>
+        )}
+
+        <label>
+          Email
+        </label>
+
         <input
           className="input"
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(
+            event
+          ) =>
+            setEmail(
+              event.target
+                .value
+            )
+          }
           type="email"
           autoComplete="email"
           placeholder="you@example.com"
+          disabled={loading}
         />
 
-        <label>Password</label>
+        <label>
+          Password
+        </label>
+
         <input
           className="input"
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(
+            event
+          ) =>
+            setPassword(
+              event.target
+                .value
+            )
+          }
           type="password"
           autoComplete="new-password"
           placeholder="Create a password"
+          disabled={loading}
         />
 
-        <label>Confirm password</label>
+        <label>
+          Confirm password
+        </label>
+
         <input
           className="input"
-          value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
+          value={
+            confirmPassword
+          }
+          onChange={(
+            event
+          ) =>
+            setConfirmPassword(
+              event.target
+                .value
+            )
+          }
           type="password"
           autoComplete="new-password"
           placeholder="Re-enter your password"
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
+          disabled={loading}
+          onKeyDown={(
+            event
+          ) => {
+            if (
+              event.key ===
+                "Enter" &&
+              !loading
+            ) {
               submit();
             }
           }}
@@ -108,24 +448,45 @@ export default function SignupPage() {
 
         <button
           className="button"
-          style={{ width: "100%" }}
+          style={{
+            width: "100%",
+            opacity: loading
+              ? 0.7
+              : 1,
+            cursor: loading
+              ? "not-allowed"
+              : "pointer",
+          }}
           onClick={submit}
           disabled={loading}
         >
-          {loading ? "Creating account..." : "Create account"}
+          {loading
+            ? "Creating account..."
+            : "Create account"}
         </button>
 
-        {message && <p className="muted">{message}</p>}
+        {message && (
+          <p className="muted">
+            {message}
+          </p>
+        )}
 
         <p className="muted">
-          Already have an account?{" "}
-          <Link className="green" href="/login">
+          Already have an
+          account?{" "}
+          <Link
+            className="green"
+            href={loginHref}
+          >
             Log in
           </Link>
         </p>
 
         <p className="muted">
-          <Link className="green" href="/">
+          <Link
+            className="green"
+            href="/"
+          >
             Back to homepage
           </Link>
         </p>

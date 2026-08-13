@@ -39,3 +39,20 @@ a{color:inherit;text-decoration:none}button,input{font:inherit}
   .dashboard-layout{grid-template-columns:1fr}.sidebar{height:auto;position:static;border-right:0;border-bottom:1px solid var(--line)}
   .sidebar nav{display:flex;overflow:auto}.side-link{white-space:nowrap}.main{padding:20px}
 }
+/* Watchlist scrollbar */
+#watchlist div::-webkit-scrollbar {
+  width: 8px;
+}
+
+#watchlist div::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#watchlist div::-webkit-scrollbar-thumb {
+  background: rgba(34, 197, 94, 0.45);
+  border-radius: 999px;
+}
+
+#watchlist div::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 197, 94, 0.8);
+}
