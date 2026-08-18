@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import {
+  Suspense,
+  useState,
+} from "react";
 import {
   useRouter,
   useSearchParams,
@@ -51,7 +54,20 @@ function getSafeNextPath(
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <LoginFallback />
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
+
   const searchParams =
     useSearchParams();
 
@@ -284,7 +300,7 @@ export default function LoginPage() {
             ) => {
               if (
                 event.key ===
-                "Enter" &&
+                  "Enter" &&
                 !loading
               ) {
                 submit();
@@ -447,6 +463,27 @@ export default function LoginPage() {
           >
             Back to homepage
           </Link>
+        </p>
+      </div>
+    </main>
+  );
+}
+
+function LoginFallback() {
+  return (
+    <main className="shell">
+      <div className="form card">
+        <div className="brand">
+          TradePilot{" "}
+          <span>AI</span>
+        </div>
+
+        <h1>
+          Welcome back
+        </h1>
+
+        <p className="muted">
+          Loading login...
         </p>
       </div>
     </main>

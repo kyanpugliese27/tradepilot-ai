@@ -14,12 +14,10 @@ export async function POST(
     process.env.STRIPE_WEBHOOK_SECRET;
 
   const supabaseUrl =
-    process.env
-      .NEXT_PUBLIC_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
 
   const serviceRoleKey =
-    process.env
-      .SUPABASE_SERVICE_ROLE_KEY;
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (
     !stripeSecretKey ||
@@ -32,7 +30,9 @@ export async function POST(
         error:
           "Stripe or Supabase webhook environment variables are missing.",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 
@@ -52,15 +52,16 @@ export async function POST(
         error:
           "Missing Stripe signature.",
       },
-      { status: 400 }
+      {
+        status: 400,
+      }
     );
   }
 
   const rawBody =
     await request.text();
 
-  let event:
-    Stripe.Event;
+  let event: Stripe.Event;
 
   try {
     event =
@@ -80,7 +81,9 @@ export async function POST(
         error:
           "Invalid webhook signature.",
       },
-      { status: 400 }
+      {
+        status: 400,
+      }
     );
   }
 
@@ -90,10 +93,8 @@ export async function POST(
       serviceRoleKey,
       {
         auth: {
-          persistSession:
-            false,
-          autoRefreshToken:
-            false,
+          persistSession: false,
+          autoRefreshToken: false,
         },
       }
     );
@@ -131,25 +132,28 @@ export async function POST(
         const {
           error:
             checkoutUpdateError,
-        } = await supabaseAdmin
-          .from(
-            "premium_subscriptions"
-          )
-          .upsert(
-            {
-              user_id:
-                userId,
-              stripe_customer_id:
-                customerId,
-              stripe_subscription_id:
-                subscriptionId ||
-                null,
-            },
-            {
-              onConflict:
-                "user_id",
-            }
-          );
+        } =
+          await supabaseAdmin
+            .from(
+              "premium_subscriptions"
+            )
+            .upsert(
+              {
+                user_id:
+                  userId,
+
+                stripe_customer_id:
+                  customerId,
+
+                stripe_subscription_id:
+                  subscriptionId ||
+                  null,
+              },
+              {
+                onConflict:
+                  "user_id",
+              }
+            );
 
         if (
           checkoutUpdateError
@@ -210,19 +214,17 @@ export async function POST(
             ? error.message
             : "Webhook processing failed.",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
 
 async function syncSubscription(
   stripe: Stripe,
-  supabaseAdmin:
-    ReturnType<
-      typeof createSupabaseAdmin
-    >,
-  subscription:
-    Stripe.Subscription
+  supabaseAdmin: any,
+  subscription: Stripe.Subscription
 ) {
   const customerId =
     typeof subscription.customer ===
@@ -255,16 +257,19 @@ async function syncSubscription(
     const {
       data:
         existingSubscription,
-    } = await supabaseAdmin
-      .from(
-        "premium_subscriptions"
-      )
-      .select("user_id")
-      .eq(
-        "stripe_customer_id",
-        customerId
-      )
-      .maybeSingle();
+    } =
+      await supabaseAdmin
+        .from(
+          "premium_subscriptions"
+        )
+        .select(
+          "user_id"
+        )
+        .eq(
+          "stripe_customer_id",
+          customerId
+        )
+        .maybeSingle();
 
     userId =
       existingSubscription
@@ -291,7 +296,8 @@ async function syncSubscription(
 
   const priceId =
     firstItem
-      ?.price?.id ||
+      ?.price
+      ?.id ||
     null;
 
   const currentPeriodEndUnix =
@@ -309,36 +315,44 @@ async function syncSubscription(
 
   const {
     error,
-  } = await supabaseAdmin
-    .from(
-      "premium_subscriptions"
-    )
-    .upsert(
-      {
-        user_id:
-          userId,
-        plan:
-          hasPremiumAccess
-            ? "premium"
-            : "free",
-        status,
-        stripe_customer_id:
-          customerId,
-        stripe_subscription_id:
-          subscription.id,
-        stripe_price_id:
-          priceId,
-        current_period_end:
-          currentPeriodEnd,
-        cancel_at_period_end:
-          subscription
-            .cancel_at_period_end,
-      },
-      {
-        onConflict:
-          "user_id",
-      }
-    );
+  } =
+    await supabaseAdmin
+      .from(
+        "premium_subscriptions"
+      )
+      .upsert(
+        {
+          user_id:
+            userId,
+
+          plan:
+            hasPremiumAccess
+              ? "premium"
+              : "free",
+
+          status,
+
+          stripe_customer_id:
+            customerId,
+
+          stripe_subscription_id:
+            subscription.id,
+
+          stripe_price_id:
+            priceId,
+
+          current_period_end:
+            currentPeriodEnd,
+
+          cancel_at_period_end:
+            subscription
+              .cancel_at_period_end,
+        },
+        {
+          onConflict:
+            "user_id",
+        }
+      );
 
   if (error) {
     throw error;

@@ -19,14 +19,14 @@ type FinnhubCalendarResponse = {
 };
 
 type FinnhubSurprise = {
-  actual?: number | null;
-  estimate?: number | null;
-  period?: string;
-  quarter?: number;
-  surprise?: number | null;
-  surprisePercent?: number | null;
-  symbol?: string;
-  year?: number;
+  symbol: string;
+  period: string;
+  quarter: number | null;
+  year: number | null;
+  actual: number | null;
+  estimate: number | null;
+  surprise: number | null;
+  surprisePercent: number | null;
 };
 
 type EarningsEvent = {

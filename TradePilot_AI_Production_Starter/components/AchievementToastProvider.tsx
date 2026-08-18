@@ -153,6 +153,8 @@ export default function AchievementToastProvider() {
         return;
       }
 
+      const userId = user.id;
+
       const {
         data: existing,
         error: existingError,
@@ -169,7 +171,7 @@ export default function AchievementToastProvider() {
             created_at
           `
         )
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("type", "achievement")
         .order("created_at", {
           ascending: false,
@@ -194,7 +196,7 @@ export default function AchievementToastProvider() {
 
       channel = supabase
         .channel(
-          `tradepilot-achievements-${user.id}`
+          `tradepilot-achievements-${userId}`
         )
         .on(
           "postgres_changes",
@@ -202,7 +204,7 @@ export default function AchievementToastProvider() {
             event: "INSERT",
             schema: "public",
             table: "notifications",
-            filter: `user_id=eq.${user.id}`,
+            filter: `user_id=eq.${userId}`,
           },
           (payload) => {
             const row =
@@ -244,7 +246,7 @@ export default function AchievementToastProvider() {
           )
           .eq(
             "user_id",
-            user.id
+            userId
           )
           .eq(
             "type",

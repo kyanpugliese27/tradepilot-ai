@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import {
+  Suspense,
+} from "react";
+import {
   useSearchParams,
 } from "next/navigation";
 
@@ -30,6 +33,18 @@ const FEATURES = [
 ];
 
 export default function PremiumRequiredPage() {
+  return (
+    <Suspense
+      fallback={
+        <PremiumRequiredFallback />
+      }
+    >
+      <PremiumRequiredContent />
+    </Suspense>
+  );
+}
+
+function PremiumRequiredContent() {
   const searchParams =
     useSearchParams();
 
@@ -197,6 +212,32 @@ export default function PremiumRequiredPage() {
             }
           }
         `}</style>
+      </section>
+    </main>
+  );
+}
+
+function PremiumRequiredFallback() {
+  return (
+    <main style={pageStyle}>
+      <section style={containerStyle}>
+        <section style={heroStyle}>
+          <div style={lockCircleStyle}>
+            🔒
+          </div>
+
+          <p style={eyebrowStyle}>
+            TradePilot Premium
+          </p>
+
+          <h1 style={titleStyle}>
+            Loading...
+          </h1>
+
+          <p style={subtitleStyle}>
+            Checking the requested Premium feature.
+          </p>
+        </section>
       </section>
     </main>
   );

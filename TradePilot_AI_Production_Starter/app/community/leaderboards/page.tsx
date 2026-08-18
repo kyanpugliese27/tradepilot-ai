@@ -1299,9 +1299,7 @@ function PodiumCard({
           ranking.avatarUrl ||
           ""
         }
-        name={
-          ranking.displayName
-        }
+        name={ranking.displayName || "Trader"}
         size={66}
       />
 
@@ -1485,9 +1483,7 @@ function LeaderboardRow({
             ranking.avatarUrl ||
             ""
           }
-          name={
-            ranking.displayName
-          }
+          name={ranking.displayName || "Trader"}
           size={40}
         />
 
@@ -1644,9 +1640,7 @@ function LeaderboardCard({
               ranking.avatarUrl ||
               ""
             }
-            name={
-              ranking.displayName
-            }
+            name={ranking.displayName || "Trader"}
             size={48}
           />
 

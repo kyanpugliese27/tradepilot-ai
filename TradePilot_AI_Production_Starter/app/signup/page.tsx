@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Suspense,
   useEffect,
   useState,
 } from "react";
@@ -42,6 +43,14 @@ function getSafeNextPath(
 }
 
 export default function SignupPage() {
+  return (
+    <Suspense fallback={<SignupFallback />}>
+      <SignupPageContent />
+    </Suspense>
+  );
+}
+
+function SignupPageContent() {
   const router =
     useRouter();
 
@@ -220,12 +229,6 @@ export default function SignupPage() {
         "tradepilot_referral"
       );
 
-      /*
-       * If Supabase returns a session immediately,
-       * email confirmation is not required.
-       * Send the user directly where they intended
-       * to go.
-       */
       if (data.session) {
         setMessage(
           nextPath ===
@@ -248,11 +251,6 @@ export default function SignupPage() {
         return;
       }
 
-      /*
-       * If email confirmation is required,
-       * send the user to login while preserving
-       * the original destination.
-       */
       setMessage(
         "Account created. Check your email if confirmation is required."
       );
@@ -489,6 +487,27 @@ export default function SignupPage() {
           >
             Back to homepage
           </Link>
+        </p>
+      </div>
+    </main>
+  );
+}
+
+function SignupFallback() {
+  return (
+    <main className="shell">
+      <div className="form card">
+        <div className="brand">
+          TradePilot{" "}
+          <span>AI</span>
+        </div>
+
+        <h1>
+          Create your account
+        </h1>
+
+        <p className="muted">
+          Loading signup...
         </p>
       </div>
     </main>

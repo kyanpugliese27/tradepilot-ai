@@ -2,6 +2,7 @@
 
 import {
   FormEvent,
+  Suspense,
   useEffect,
   useMemo,
   useState,
@@ -102,7 +103,7 @@ type MetricRow = {
     | "none";
 };
 
-export default function ComparePage() {
+function ComparePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -650,6 +651,15 @@ export default function ComparePage() {
         `}</style>
       </main>
     </div>
+  );
+}
+
+
+export default function ComparePage() {
+  return (
+    <Suspense fallback={<ComparisonSkeleton />}>
+      <ComparePageContent />
+    </Suspense>
   );
 }
 
