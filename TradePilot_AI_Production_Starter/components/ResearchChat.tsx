@@ -39,7 +39,7 @@ const welcomeMessage: ResearchMessage = {
   id: "welcome",
   role: "assistant",
   content:
-    "Welcome to TradePilot AI Research. Ask about a company, compare stocks, learn an investing concept, or review your paper-trading portfolio.",
+    "Welcome to Norvexa Research. Ask about a company, compare stocks, learn an investing concept, or review your paper-trading portfolio.",
   createdAt: new Date().toISOString(),
 };
 
@@ -1042,7 +1042,7 @@ function MessageBubble({
         >
           {isUser
             ? "You"
-            : "TradePilot AI"}{" "}
+            : "Norvexa"}{" "}
           ·{" "}
           {new Date(
             message.createdAt

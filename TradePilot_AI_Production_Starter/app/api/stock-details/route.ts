@@ -63,22 +63,22 @@ const PROFILE_CACHE_MS = 24 * 60 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 7_000;
 
 const globalCache = globalThis as typeof globalThis & {
-  tradePilotQuoteCache?: Map<string, CachedQuote>;
-  tradePilotProfileCache?: Map<string, CachedProfile>;
-  tradePilotPendingQuotes?: Map<string, Promise<StockResponse>>;
+  NorvexaQuoteCache?: Map<string, CachedQuote>;
+  NorvexaProfileCache?: Map<string, CachedProfile>;
+  NorvexaPendingQuotes?: Map<string, Promise<StockResponse>>;
 };
 
 const quoteCache =
-  globalCache.tradePilotQuoteCache ??
-  (globalCache.tradePilotQuoteCache = new Map());
+  globalCache.NorvexaQuoteCache ??
+  (globalCache.NorvexaQuoteCache = new Map());
 
 const profileCache =
-  globalCache.tradePilotProfileCache ??
-  (globalCache.tradePilotProfileCache = new Map());
+  globalCache.NorvexaProfileCache ??
+  (globalCache.NorvexaProfileCache = new Map());
 
 const pendingQuotes =
-  globalCache.tradePilotPendingQuotes ??
-  (globalCache.tradePilotPendingQuotes = new Map());
+  globalCache.NorvexaPendingQuotes ??
+  (globalCache.NorvexaPendingQuotes = new Map());
 
 export async function GET(request: NextRequest) {
   const apiKey = process.env.FINNHUB_API_KEY;
@@ -333,7 +333,7 @@ function stockJson(
       headers: {
         "Cache-Control":
           "private, no-cache, no-store, max-age=0, must-revalidate",
-        "X-TradePilot-Cache": cacheStatus,
+        "X-Norvexa-Cache": cacheStatus,
       },
     }
   );

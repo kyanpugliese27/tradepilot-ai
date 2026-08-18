@@ -784,7 +784,7 @@ export default function ProfilePage() {
 
         <p style={mutedStyle}>
           Control how you appear in the
-          TradePilot community and what
+          Norvexa community and what
           portfolio information other
           users may see.
         </p>
@@ -1376,7 +1376,7 @@ export default function ProfilePage() {
                 }}
               >
                 Badges unlock automatically as
-                you reach TradePilot milestones.
+                you reach Norvexa milestones.
               </p>
             </div>
 
@@ -1409,7 +1409,7 @@ export default function ProfilePage() {
                 }}
               >
                 Complete paper-trading and
-                TradePilot milestones to unlock
+                Norvexa milestones to unlock
                 achievements.
               </p>
             </div>

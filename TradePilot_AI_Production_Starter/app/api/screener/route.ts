@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
       model: "gpt-5-mini",
       store: false,
       instructions: `
-You are TradePilot AI, an educational stock screener inside a paper-trading application.
+You are Norvexa, an educational stock screener inside a paper-trading application.
 
 Rank stocks only from the supplied candidate universe and only using supplied metrics.
 

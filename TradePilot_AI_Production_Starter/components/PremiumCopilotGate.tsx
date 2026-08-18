@@ -8,7 +8,7 @@ import {
   usePathname,
 } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import TradePilotCopilot from "@/components/TradePilotCopilot";
+import NorvexaCopilot from "@/components/TradePilotCopilot";
 
 type SubscriptionRow = {
   plan: "free" | "premium";
@@ -32,7 +32,6 @@ export default function PremiumCopilotGate() {
     let cancelled = false;
 
     async function checkAccess() {
-      // Never show Copilot on public/auth pages.
       if (
         !pathname ||
         HIDDEN_ROUTES.has(
@@ -107,8 +106,12 @@ export default function PremiumCopilotGate() {
         const premiumActive =
           subscription?.plan ===
             "premium" &&
-          subscription.status ===
-            "active";
+          [
+            "active",
+            "trialing",
+          ].includes(
+            subscription.status
+          );
 
         setAllowed(
           premiumActive
@@ -138,6 +141,6 @@ export default function PremiumCopilotGate() {
   }
 
   return (
-    <TradePilotCopilot />
+    <NorvexaCopilot />
   );
 }

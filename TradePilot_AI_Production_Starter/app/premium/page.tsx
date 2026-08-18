@@ -195,16 +195,16 @@ export default function PremiumPage() {
         </div>
 
         <p style={eyebrowStyle}>
-          TradePilot membership
+          Norvexa membership
         </p>
 
         <h1 style={titleStyle}>
-          TradePilot Premium
+          Norvexa Premium
         </h1>
 
         <p style={subtitleStyle}>
           Unlock the premium tier of
-          TradePilot with advanced
+          Norvexa with advanced
           research, deeper analytics,
           and future premium-only
           investing tools.
@@ -238,7 +238,7 @@ export default function PremiumPage() {
                 fontSize: 28,
               }}
             >
-              TradePilot Free
+              Norvexa Free
             </h2>
 
             <p style={mutedStyle}>
@@ -308,11 +308,11 @@ export default function PremiumPage() {
                 fontSize: 28,
               }}
             >
-              TradePilot Premium
+              Norvexa Premium
             </h2>
 
             <p style={mutedStyle}>
-              Advanced TradePilot
+              Advanced Norvexa
               features for users who
               want the full platform.
             </p>

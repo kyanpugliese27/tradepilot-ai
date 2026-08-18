@@ -30,7 +30,7 @@ type CommunityStats = {
 const communityItems = [
   {
     title: "Friends",
-    description: "Find traders, manage friend requests, and view your TradePilot connections.",
+    description: "Find traders, manage friend requests, and view your Norvexa connections.",
     href: "/community/friends",
     icon: "👥",
     badge: "Connect",
@@ -44,7 +44,7 @@ const communityItems = [
   },
   {
     title: "Competitions",
-    description: "Create and join virtual trading competitions with other TradePilot users.",
+    description: "Create and join virtual trading competitions with other Norvexa users.",
     href: "/community/competitions",
     icon: "🏁",
     badge: "Compete",
@@ -107,7 +107,7 @@ export default function CommunityPage() {
           data: result,
           error: rpcError,
         } = await supabase.rpc(
-          "get_tradepilot_community_stats"
+          "get_Norvexa_community_stats"
         );
 
         if (rpcError) {
@@ -151,7 +151,7 @@ export default function CommunityPage() {
           </Link>
         </div>
 
-        <p style={eyebrowStyle}>TradePilot social investing</p>
+        <p style={eyebrowStyle}>Norvexa social investing</p>
         <h1 style={titleStyle}>Community</h1>
         <p style={subtitleStyle}>
           Connect with other traders, compare paper-trading performance,
@@ -162,7 +162,7 @@ export default function CommunityPage() {
           <div>
             <p style={heroEyebrowStyle}>COMMUNITY HUB</p>
             <h2 style={heroTitleStyle}>
-              Learn, compete, and grow with other TradePilot users.
+              Learn, compete, and grow with other Norvexa users.
             </h2>
             <p style={heroTextStyle}>
               Your Community hub brings together profiles, friends,
@@ -172,7 +172,7 @@ export default function CommunityPage() {
 
           <div style={heroBadgeStyle}>
             <span style={{ fontSize: 34 }}>🌐</span>
-            <strong style={{ marginTop: 7 }}>TradePilot Community</strong>
+            <strong style={{ marginTop: 7 }}>Norvexa Community</strong>
             <span style={{ ...mutedStyle, fontSize: 10, marginTop: 4 }}>
               Paper-trading network
             </span>
@@ -191,7 +191,7 @@ export default function CommunityPage() {
               </h2>
 
               <p style={statsSubtitleStyle}>
-                Real activity across the TradePilot
+                Real activity across the Norvexa
                 paper-trading community.
               </p>
             </div>
@@ -257,7 +257,7 @@ export default function CommunityPage() {
                         .totalTrades ?? 0
                     )
               }
-              note="Trades recorded across TradePilot"
+              note="Trades recorded across Norvexa"
             />
 
             <CommunityStat
@@ -374,7 +374,7 @@ export default function CommunityPage() {
           <strong>Paper-trading community</strong>
           <p style={{ margin: "6px 0 0", ...mutedStyle, fontSize: 11, lineHeight: 1.55 }}>
             Community rankings, portfolios, and competitions are based on
-            TradePilot virtual trading activity and are not verified
+            Norvexa virtual trading activity and are not verified
             real-money brokerage results.
           </p>
         </div>

@@ -120,7 +120,7 @@ export async function POST(request: Request) {
               undefined,
 
             metadata: {
-              tradepilot_user_id:
+              Norvexa_user_id:
                 user.id,
             },
           }
@@ -195,13 +195,13 @@ export async function POST(request: Request) {
             user.id,
 
           metadata: {
-            tradepilot_user_id:
+            Norvexa_user_id:
               user.id,
           },
 
           subscription_data: {
             metadata: {
-              tradepilot_user_id:
+              Norvexa_user_id:
                 user.id,
             },
           },

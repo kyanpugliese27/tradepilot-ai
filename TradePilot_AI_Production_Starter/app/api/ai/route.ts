@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const response = await client.responses.create({
       model: "gpt-5-mini",
-      instructions: `You are TradePilot AI, an educational market-research assistant.
+      instructions: `You are Norvexa, an educational market-research assistant.
 Explain concepts clearly and neutrally. Do not claim to know live prices unless data is
 provided. Do not tell users exactly what to buy, sell, or how much to invest. State key
 uncertainties and risks. Keep answers under 300 words.`,

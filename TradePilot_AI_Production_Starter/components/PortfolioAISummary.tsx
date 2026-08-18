@@ -22,7 +22,7 @@ type PortfolioAISummaryProps = {
   refreshKey?: string | number;
 };
 
-const cacheKey = "tradepilot-dashboard-ai-summary";
+const cacheKey = "Norvexa-dashboard-ai-summary";
 const cacheDurationMs = 5 * 60 * 1000;
 
 export default function PortfolioAISummary({
@@ -175,7 +175,7 @@ export default function PortfolioAISummary({
       <div style={headerStyle}>
         <div>
           <p style={eyebrowStyle}>
-            TradePilot intelligence
+            Norvexa intelligence
           </p>
           <h2 style={{ margin: 0 }}>
             AI Portfolio Summary
@@ -282,7 +282,7 @@ export default function PortfolioAISummary({
 
       <div style={insightStyle}>
         <p style={eyebrowStyle}>
-          TradePilot insight
+          Norvexa insight
         </p>
 
         <p

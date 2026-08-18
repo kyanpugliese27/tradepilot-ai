@@ -704,7 +704,7 @@ export default function DividendAlertsPage() {
 
         <p style={mutedStyle}>
           Track changes to the dividend
-          information TradePilot already
+          information Norvexa already
           receives for a company.
         </p>
 
@@ -908,7 +908,7 @@ export default function DividendAlertsPage() {
           >
             This version monitors the
             dividend-yield data already
-            returned by TradePilot&apos;s
+            returned by Norvexa&apos;s
             fundamentals system and
             notifies you when that value
             changes. A production

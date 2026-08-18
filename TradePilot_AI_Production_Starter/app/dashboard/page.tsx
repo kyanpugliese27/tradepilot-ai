@@ -746,7 +746,7 @@ export default function DashboardPage() {
         }}
       >
         <div className="card">
-          <h2>Loading TradePilot AI...</h2>
+          <h2>Loading Norvexa...</h2>
           <p className="muted">Checking your account.</p>
         </div>
       </main>
@@ -1498,7 +1498,7 @@ export default function DashboardPage() {
                   textTransform: "uppercase",
                 }}
               >
-                TradePilot intelligence
+                Norvexa intelligence
               </p>
 
               <h2 style={{ margin: 0 }}>

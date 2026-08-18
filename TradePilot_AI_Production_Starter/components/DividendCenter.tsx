@@ -818,7 +818,7 @@ function UnavailablePanel({
       .temporaryFailure
   ) {
     message =
-      "Dividend history is temporarily unavailable from Finnhub. The rest of TradePilot will continue working normally.";
+      "Dividend history is temporarily unavailable from Finnhub. The rest of Norvexa will continue working normally.";
   }
 
   return (

@@ -1084,7 +1084,7 @@ export default function EarningsAlertsPage() {
             }}
           >
             These alerts reuse
-            TradePilot&apos;s existing
+            Norvexa&apos;s existing
             earnings calendar data.
             Active alerts are checked
             when this page loads and

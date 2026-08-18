@@ -147,7 +147,7 @@ export default function Sidebar() {
         >
           {!collapsed && (
             <div className="brand">
-              TradePilot{" "}
+              Norvexa{" "}
               <span>AI</span>
             </div>
           )}

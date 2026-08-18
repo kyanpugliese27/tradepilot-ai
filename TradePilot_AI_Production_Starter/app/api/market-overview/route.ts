@@ -25,7 +25,7 @@ export const revalidate = 0;
 const MARKET_CACHE_MS = 20_000;
 
 const globalMarketCache = globalThis as typeof globalThis & {
-  tradePilotMarketOverviewCache?: {
+  NorvexaMarketOverviewCache?: {
     data: unknown;
     savedAt: number;
   };
@@ -33,7 +33,7 @@ const globalMarketCache = globalThis as typeof globalThis & {
 
 export async function GET(request: Request) {
   const cached =
-    globalMarketCache.tradePilotMarketOverviewCache;
+    globalMarketCache.NorvexaMarketOverviewCache;
 
   if (
     cached &&
@@ -123,7 +123,7 @@ export async function GET(request: Request) {
         "Market cards use liquid ETFs as practical proxies for major U.S. indexes and volatility.",
     };
 
-    globalMarketCache.tradePilotMarketOverviewCache = {
+    globalMarketCache.NorvexaMarketOverviewCache = {
       data,
       savedAt: Date.now(),
     };
@@ -340,7 +340,7 @@ function jsonResponse(
     status: 200,
     headers: {
       ...noStoreHeaders(),
-      "X-TradePilot-Market-Cache": cacheStatus,
+      "X-Norvexa-Market-Cache": cacheStatus,
     },
   });
 }

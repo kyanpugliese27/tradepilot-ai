@@ -54,7 +54,7 @@ export default function ForgotPasswordPage() {
     <main className="shell">
       <div className="form card">
         <div className="brand">
-          TradePilot <span>AI</span>
+          Norvexa <span>AI</span>
         </div>
 
         <h1>Reset your password</h1>

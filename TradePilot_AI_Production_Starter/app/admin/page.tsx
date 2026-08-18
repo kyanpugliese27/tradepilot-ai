@@ -93,7 +93,7 @@ export default function AdminPage() {
               ← Back to Dashboard
             </Link>
 
-            <p style={eyebrowStyle}>TradePilot owner</p>
+            <p style={eyebrowStyle}>Norvexa owner</p>
             <h1 style={titleStyle}>Admin Dashboard</h1>
             <p style={subtitleStyle}>
               Users, subscriptions, Stripe revenue and growth at a glance.

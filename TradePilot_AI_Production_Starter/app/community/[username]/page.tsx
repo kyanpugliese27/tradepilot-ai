@@ -134,7 +134,7 @@ export default function PublicCommunityProfilePage() {
           data: result,
           error: rpcError,
         } = await supabase.rpc(
-          "get_tradepilot_public_profile",
+          "get_Norvexa_public_profile",
           {
             requested_username:
               username,
@@ -183,7 +183,7 @@ export default function PublicCommunityProfilePage() {
           data: result,
           error: rpcError,
         } = await supabase.rpc(
-          "get_tradepilot_follow_status",
+          "get_Norvexa_follow_status",
           {
             requested_username:
               username,
@@ -241,7 +241,7 @@ export default function PublicCommunityProfilePage() {
         data: result,
         error: rpcError,
       } = await supabase.rpc(
-        "toggle_tradepilot_follow",
+        "toggle_Norvexa_follow",
         {
           requested_username:
             username,
@@ -303,10 +303,10 @@ export default function PublicCommunityProfilePage() {
         : `/community/${username}`;
 
     const shareTitle =
-      `${data.profile.displayName || "Trader"} on TradePilot`;
+      `${data.profile.displayName || "Trader"} on Norvexa`;
 
     const shareText =
-      `Check out @${username}'s TradePilot paper-trading profile.`;
+      `Check out @${username}'s Norvexa paper-trading profile.`;
 
     try {
       if (
@@ -451,7 +451,7 @@ export default function PublicCommunityProfilePage() {
               {error ||
                 (privateProfile
                   ? "This user has chosen not to share their community profile publicly."
-                  : "The requested TradePilot username does not exist.")}
+                  : "The requested Norvexa username does not exist.")}
             </p>
           </div>
         </section>
@@ -521,7 +521,7 @@ export default function PublicCommunityProfilePage() {
 
               <div>
                 <p style={eyebrowStyle}>
-                  TradePilot Community
+                  Norvexa Community
                 </p>
 
                 <h1
@@ -955,7 +955,7 @@ export default function PublicCommunityProfilePage() {
             <SectionHeading
               eyebrow="Achievements"
               title="Badges"
-              subtitle="Milestones this trader has earned on TradePilot."
+              subtitle="Milestones this trader has earned on Norvexa."
             />
 
             <span
@@ -970,7 +970,7 @@ export default function PublicCommunityProfilePage() {
           {achievements.length === 0 ? (
             <EmptyState
               title="No badges yet"
-              text="This trader has not unlocked any TradePilot achievements yet."
+              text="This trader has not unlocked any Norvexa achievements yet."
             />
           ) : (
             <div
@@ -1090,7 +1090,7 @@ export default function PublicCommunityProfilePage() {
           >
             Community statistics are
             based only on virtual
-            TradePilot activity. They do
+            Norvexa activity. They do
             not represent verified
             brokerage assets or real-money
             investment performance.

@@ -26,7 +26,7 @@ type ThemePreference =
   | "system";
 
 const themeStorageKey =
-  "tradepilot-theme-preference";
+  "Norvexa-theme-preference";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -515,7 +515,7 @@ export default function SettingsPage() {
             </p>
 
             <h2 style={{ margin: 0 }}>
-              TradePilot Premium
+              Norvexa Premium
             </h2>
 
             <p

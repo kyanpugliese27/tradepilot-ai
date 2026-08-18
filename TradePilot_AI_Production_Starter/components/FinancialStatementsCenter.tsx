@@ -497,7 +497,7 @@ export default function FinancialStatementsCenter({
           {data.aiSummary && (
             <div style={aiPanelStyle}>
               <p style={eyebrowStyle}>
-                TradePilot AI
+                Norvexa
               </p>
 
               <h3 style={{ margin: 0 }}>
@@ -839,7 +839,7 @@ function UnavailablePanel({
         }}
       >
         {premium
-          ? "Finnhub’s standardized financial statements require premium fundamental-data access. The rest of TradePilot will continue working normally."
+          ? "Finnhub’s standardized financial statements require premium fundamental-data access. The rest of Norvexa will continue working normally."
           : "No standardized financial statements were returned for this company or selected frequency."}
       </p>
     </div>

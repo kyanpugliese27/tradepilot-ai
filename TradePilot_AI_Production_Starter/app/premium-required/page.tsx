@@ -14,7 +14,7 @@ const FEATURES = [
     title:
       "Advanced AI Research",
     description:
-      "Use TradePilot's deeper AI research workspace and saved research tools.",
+      "Use Norvexa's deeper AI research workspace and saved research tools.",
   },
   {
     icon: "📊",
@@ -28,7 +28,7 @@ const FEATURES = [
     title:
       "AI Stock Screener",
     description:
-      "Describe the type of company you want and let TradePilot rank matching stocks.",
+      "Describe the type of company you want and let Norvexa rank matching stocks.",
   },
 ];
 
@@ -80,7 +80,7 @@ function PremiumRequiredContent() {
           </div>
 
           <p style={eyebrowStyle}>
-            TradePilot Premium
+            Norvexa Premium
           </p>
 
           <h1 style={titleStyle}>
@@ -90,8 +90,8 @@ function PremiumRequiredContent() {
           <p style={subtitleStyle}>
             {reason ===
             "verification"
-              ? "TradePilot could not verify your Premium status. Try again or open your subscription page."
-              : "This feature is part of TradePilot Premium. Upgrade to unlock the full investing research experience."}
+              ? "Norvexa could not verify your Premium status. Try again or open your subscription page."
+              : "This feature is part of Norvexa Premium. Upgrade to unlock the full investing research experience."}
           </p>
 
           {from && (
@@ -198,7 +198,7 @@ function PremiumRequiredContent() {
             If your subscription was
             just activated, return to
             the Premium page first so
-            TradePilot can display your
+            Norvexa can display your
             current billing status,
             then reopen the feature.
           </p>
@@ -227,7 +227,7 @@ function PremiumRequiredFallback() {
           </div>
 
           <p style={eyebrowStyle}>
-            TradePilot Premium
+            Norvexa Premium
           </p>
 
           <h1 style={titleStyle}>

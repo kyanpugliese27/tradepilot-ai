@@ -668,7 +668,7 @@ export default function PriceAlertsPage() {
 
         <p style={mutedStyle}>
           Choose a stock, set a target,
-          and TradePilot will create a
+          and Norvexa will create a
           notification when the target
           condition is met.
         </p>

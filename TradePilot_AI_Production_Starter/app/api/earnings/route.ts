@@ -380,7 +380,7 @@ export async function POST(request: NextRequest) {
       model: "gpt-5-mini",
       store: false,
       instructions: `
-You are TradePilot AI, an educational earnings assistant.
+You are Norvexa, an educational earnings assistant.
 
 Use only the supplied earnings-calendar event and historical surprise data.
 

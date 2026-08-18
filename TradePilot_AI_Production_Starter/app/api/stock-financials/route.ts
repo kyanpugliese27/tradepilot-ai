@@ -184,7 +184,7 @@ export async function GET(request: NextRequest) {
           model: "gpt-5-mini",
           store: false,
           instructions: `
-You are TradePilot AI, an educational financial-statement analyst.
+You are Norvexa, an educational financial-statement analyst.
 
 Use only the supplied normalized statement data.
 

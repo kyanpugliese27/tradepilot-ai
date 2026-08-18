@@ -1354,7 +1354,7 @@ export default function StockPage() {
                       textTransform: "uppercase",
                     }}
                   >
-                    TradePilot intelligence
+                    Norvexa intelligence
                   </p>
 
                   <h2
@@ -1440,7 +1440,7 @@ export default function StockPage() {
                       fontWeight: 600,
                     }}
                   >
-                    TradePilot AI is reviewing {symbol}...
+                    Norvexa is reviewing {symbol}...
                   </p>
 
                   <p

@@ -23,7 +23,7 @@ export default function Footer() {
               </span>
 
               <span>
-                TradePilot{" "}
+                Norvexa{" "}
                 <span style={brandAiStyle}>
                   AI
                 </span>
@@ -115,7 +115,7 @@ export default function Footer() {
 
         <div style={bottomBarStyle}>
           <span>
-            © {year} TradePilot AI.
+            © {year} Norvexa.
           </span>
 
           <span style={disclaimerStyle}>

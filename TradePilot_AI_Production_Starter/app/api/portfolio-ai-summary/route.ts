@@ -187,7 +187,7 @@ export async function GET(request: NextRequest) {
       model: "gpt-5-mini",
       store: false,
       instructions: `
-You are TradePilot AI, an educational portfolio-summary assistant for a paper-trading app.
+You are Norvexa, an educational portfolio-summary assistant for a paper-trading app.
 
 Use only the supplied portfolio data.
 

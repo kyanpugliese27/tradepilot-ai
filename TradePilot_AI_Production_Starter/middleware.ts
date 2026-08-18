@@ -540,7 +540,7 @@ export async function middleware(
       return NextResponse.json(
         {
           error:
-            "TradePilot Premium is required to use this feature.",
+            "Norvexa Premium is required to use this feature.",
           premiumRequired:
             true,
           upgradeUrl:

@@ -321,14 +321,14 @@ export default function SubscriptionSettingsPage() {
 
                   <h2 style={planTitleStyle}>
                     {isPremium
-                      ? "TradePilot Premium"
+                      ? "Norvexa Premium"
                       : "Free Plan"}
                   </h2>
 
                   <p style={planDescriptionStyle}>
                     {isPremium
-                      ? "You have access to TradePilot Premium features."
-                      : "Upgrade anytime to unlock advanced TradePilot tools."}
+                      ? "You have access to Norvexa Premium features."
+                      : "Upgrade anytime to unlock advanced Norvexa tools."}
                   </p>
                 </div>
 

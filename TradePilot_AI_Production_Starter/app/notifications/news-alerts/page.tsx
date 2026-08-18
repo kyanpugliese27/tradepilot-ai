@@ -755,7 +755,7 @@ export default function NewsAlertsPage() {
         <p style={mutedStyle}>
           Follow a stock and receive
           an in-app notification when
-          TradePilot detects a newer
+          Norvexa detects a newer
           company news article.
         </p>
 
@@ -949,7 +949,7 @@ export default function NewsAlertsPage() {
             }}
           >
             When you create an alert,
-            TradePilot saves the newest
+            Norvexa saves the newest
             article as the starting
             point so old stories do not
             immediately trigger alerts.

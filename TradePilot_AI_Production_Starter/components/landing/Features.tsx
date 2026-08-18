@@ -92,7 +92,7 @@ export default function Features() {
               eyebrow="AI RESEARCH"
               icon="✦"
               title="Ask better questions about any stock."
-              description="Use TradePilot AI to research companies, compare stocks, understand earnings, and break down investing concepts in plain English."
+              description="Use Norvexa to research companies, compare stocks, understand earnings, and break down investing concepts in plain English."
               accent="blue"
               large
             >
@@ -104,7 +104,7 @@ export default function Features() {
                 <div style={researchBubbleAiStyle}>
                   <div style={researchAiHeadingStyle}>
                     <span>✦</span>
-                    TradePilot AI
+                    Norvexa
                   </div>
 
                   <p style={researchAiTextStyle}>
@@ -268,7 +268,7 @@ export default function Features() {
               eyebrow="COMMUNITY"
               icon="◎"
               title="Learn from other paper traders."
-              description="Follow public traders, compare rankings, share profiles, earn badges, and compete through the TradePilot community."
+              description="Follow public traders, compare rankings, share profiles, earn badges, and compete through the Norvexa community."
               accent="pink"
             >
               <div style={communityDemoStyle}>
@@ -313,7 +313,7 @@ export default function Features() {
             </p>
 
             <h2 style={sectionTitleStyle}>
-              Go from idea to insight without leaving TradePilot.
+              Go from idea to insight without leaving Norvexa.
             </h2>
           </div>
 

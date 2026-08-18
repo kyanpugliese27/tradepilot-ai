@@ -1,6 +1,6 @@
-# TradePilot AI — Production Starter
+# Norvexa — Production Starter
 
-This is the first real, structured TradePilot AI codebase.
+This is the first real, structured Norvexa codebase.
 
 ## Included
 
@@ -46,7 +46,7 @@ browser-visible code. Add them through `.env.local` and Vercel environment varia
 
 ## First deployment path
 
-1. Create a GitHub repository named `tradepilot-ai`.
+1. Create a GitHub repository named `Norvexa-ai`.
 2. Upload the contents of this folder.
 3. Import the repository into Vercel.
 4. Deploy.
@@ -54,7 +54,7 @@ browser-visible code. Add them through `.env.local` and Vercel environment varia
 
 ## Compliance boundary for version one
 
-TradePilot should initially be marketed as an educational research and information tool.
+Norvexa should initially be marketed as an educational research and information tool.
 Avoid automatic trade execution and personalized directives such as exact buy/sell
 instructions or allocations until qualified legal counsel reviews the product.
 

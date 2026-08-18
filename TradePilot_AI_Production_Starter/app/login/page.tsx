@@ -19,7 +19,7 @@ function getSafeNextPath(
   }
 
   /*
-   * Only allow internal TradePilot paths.
+   * Only allow internal Norvexa paths.
    * This prevents URLs such as:
    *
    * /login?next=https://example.com
@@ -223,7 +223,7 @@ function LoginPageContent() {
     <main className="shell">
       <div className="form card">
         <div className="brand">
-          TradePilot{" "}
+          Norvexa{" "}
           <span>AI</span>
         </div>
 
@@ -436,7 +436,7 @@ function LoginPageContent() {
             }}
           >
             After login,
-            TradePilot will
+            Norvexa will
             return you to{" "}
             <strong>
               {nextPath}
@@ -474,7 +474,7 @@ function LoginFallback() {
     <main className="shell">
       <div className="form card">
         <div className="brand">
-          TradePilot{" "}
+          Norvexa{" "}
           <span>AI</span>
         </div>
 

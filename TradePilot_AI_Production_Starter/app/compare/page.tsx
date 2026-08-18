@@ -869,7 +869,7 @@ function AIComparisonSection({
       }}
     >
       <p style={eyebrowStyle}>
-        TradePilot intelligence
+        Norvexa intelligence
       </p>
 
       <h2 style={{ margin: 0 }}>

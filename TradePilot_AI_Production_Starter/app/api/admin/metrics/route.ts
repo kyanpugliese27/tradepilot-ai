@@ -21,7 +21,7 @@ export async function GET() {
       process.env.STRIPE_SECRET_KEY;
 
     const adminEmail =
-      process.env.TRADEPILOT_ADMIN_EMAIL
+      process.env.Norvexa_ADMIN_EMAIL
         ?.trim()
         .toLowerCase();
 

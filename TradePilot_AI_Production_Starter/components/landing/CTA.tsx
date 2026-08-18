@@ -83,7 +83,7 @@ export default function CTA() {
             <h2 style={titleStyle}>
               Start researching smarter.
               <br />
-              Build your process with TradePilot.
+              Build your process with Norvexa.
             </h2>
 
             <p style={subtitleStyle}>

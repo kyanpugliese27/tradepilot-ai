@@ -266,7 +266,7 @@ async function createStockAnalysis(body: RequestBody) {
     model: "gpt-5-mini",
     store: false,
     instructions: `
-You are TradePilot AI, an educational stock-market analysis assistant.
+You are Norvexa, an educational stock-market analysis assistant.
 
 Analyze only the quote and news supplied by the application.
 
@@ -380,7 +380,7 @@ async function createPortfolioAnalysis(
     model: "gpt-5-mini",
     store: false,
     instructions: `
-You are TradePilot AI, an educational portfolio-analysis assistant for a paper-trading application.
+You are Norvexa, an educational portfolio-analysis assistant for a paper-trading application.
 
 Analyze only the portfolio data supplied by the application.
 

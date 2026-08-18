@@ -110,7 +110,7 @@ export async function POST(
 
       const userId =
         session.metadata
-          ?.tradepilot_user_id ||
+          ?.Norvexa_user_id ||
         session.client_reference_id;
 
       const customerId =
@@ -234,7 +234,7 @@ async function syncSubscription(
 
   let userId =
     subscription.metadata
-      ?.tradepilot_user_id ||
+      ?.Norvexa_user_id ||
     null;
 
   if (!userId) {
@@ -248,7 +248,7 @@ async function syncSubscription(
     ) {
       userId =
         customer.metadata
-          ?.tradepilot_user_id ||
+          ?.Norvexa_user_id ||
         null;
     }
   }
@@ -279,7 +279,7 @@ async function syncSubscription(
 
   if (!userId) {
     throw new Error(
-      `Unable to match Stripe customer ${customerId} to a TradePilot user.`
+      `Unable to match Stripe customer ${customerId} to a Norvexa user.`
     );
   }
 

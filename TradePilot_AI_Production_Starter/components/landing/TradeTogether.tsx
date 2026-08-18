@@ -79,7 +79,7 @@ export default function TradeTogether() {
           <p style={subtitleStyle}>
             Follow public paper traders, compare performance,
             earn achievements, and see how your investing process
-            stacks up across the TradePilot community.
+            stacks up across the Norvexa community.
           </p>
         </div>
 

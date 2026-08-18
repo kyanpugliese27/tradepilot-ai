@@ -502,7 +502,7 @@ export default function ActivityPage() {
 
     link.href = url;
     link.download =
-      "tradepilot-activity.csv";
+      "Norvexa-activity.csv";
 
     document.body.appendChild(
       link

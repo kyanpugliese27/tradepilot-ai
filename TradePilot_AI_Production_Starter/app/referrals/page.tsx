@@ -95,10 +95,10 @@ export default function ReferralsPage() {
           <span style={badgeStyle}>👥 Referrals</span>
         </div>
 
-        <p style={eyebrowStyle}>TradePilot growth</p>
+        <p style={eyebrowStyle}>Norvexa growth</p>
         <h1 style={titleStyle}>Invite Friends</h1>
         <p style={subtitleStyle}>
-          Share your personal TradePilot link. New users who join through it
+          Share your personal Norvexa link. New users who join through it
           will be connected to your referral account.
         </p>
 

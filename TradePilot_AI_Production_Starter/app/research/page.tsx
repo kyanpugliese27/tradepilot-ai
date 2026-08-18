@@ -41,7 +41,7 @@ export default function ResearchPage() {
                   textTransform: "uppercase",
                 }}
               >
-                TradePilot intelligence
+                Norvexa intelligence
               </p>
 
               <h1

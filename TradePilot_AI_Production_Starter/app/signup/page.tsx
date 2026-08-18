@@ -103,13 +103,13 @@ function SignupPageContent() {
       setReferralCode(code);
 
       localStorage.setItem(
-        "tradepilot_referral",
+        "Norvexa_referral",
         code
       );
     } else {
       const savedCode =
         localStorage.getItem(
-          "tradepilot_referral"
+          "Norvexa_referral"
         );
 
       if (savedCode) {
@@ -186,7 +186,7 @@ function SignupPageContent() {
       const savedReferral =
         referralCode ||
         localStorage.getItem(
-          "tradepilot_referral"
+          "Norvexa_referral"
         ) ||
         "";
 
@@ -226,7 +226,7 @@ function SignupPageContent() {
       }
 
       localStorage.removeItem(
-        "tradepilot_referral"
+        "Norvexa_referral"
       );
 
       if (data.session) {
@@ -278,7 +278,7 @@ function SignupPageContent() {
     <main className="shell">
       <div className="form card">
         <div className="brand">
-          TradePilot{" "}
+          Norvexa{" "}
           <span>AI</span>
         </div>
 
@@ -354,7 +354,7 @@ function SignupPageContent() {
             }}
           >
             After signup,
-            TradePilot will
+            Norvexa will
             continue to{" "}
             <strong
               style={{
@@ -498,7 +498,7 @@ function SignupFallback() {
     <main className="shell">
       <div className="form card">
         <div className="brand">
-          TradePilot{" "}
+          Norvexa{" "}
           <span>AI</span>
         </div>
 

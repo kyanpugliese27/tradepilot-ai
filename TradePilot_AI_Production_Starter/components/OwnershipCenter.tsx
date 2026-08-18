@@ -749,7 +749,7 @@ function Unavailable({
     >
       {text}
       {premium
-        ? " The rest of TradePilot continues to work normally."
+        ? " The rest of Norvexa continues to work normally."
         : ""}
     </div>
   );

@@ -75,7 +75,7 @@ export default function Hero() {
             </span>
 
             <span>
-              TradePilot{" "}
+              Norvexa{" "}
               <span style={brandAiStyle}>
                 AI
               </span>
@@ -118,7 +118,7 @@ export default function Hero() {
           <div style={navActionsStyle}>
             <Link
               href="/login"
-              className="tradepilot-nav-login"
+              className="Norvexa-nav-login"
               style={loginButtonStyle}
             >
               Log in
@@ -134,7 +134,7 @@ export default function Hero() {
         </header>
 
         <section
-          className="tradepilot-hero"
+          className="Norvexa-hero"
           style={heroStyle}
         >
           <div
@@ -159,7 +159,7 @@ export default function Hero() {
             </h1>
 
             <p style={heroSubtitleStyle}>
-              TradePilot brings market research,
+              Norvexa brings market research,
               AI-powered analysis, portfolio tools,
               paper trading, alerts, and a social
               investing community into one modern
@@ -200,7 +200,7 @@ export default function Hero() {
 
           <div
             data-reveal
-            className="tradepilot-preview tp-reveal tp-reveal-right"
+            className="Norvexa-preview tp-reveal tp-reveal-right"
             style={previewWrapStyle}
           >
             <div style={previewGlowStyle} />
@@ -232,7 +232,7 @@ export default function Hero() {
                 </div>
 
                 <div style={browserAddressStyle}>
-                  tradepilot.ai/dashboard
+                  Norvexa.ai/dashboard
                 </div>
 
                 <span style={secureStyle}>
@@ -242,7 +242,7 @@ export default function Hero() {
 
               <div style={appPreviewStyle}>
                 <aside
-                  className="tradepilot-mini-sidebar"
+                  className="Norvexa-mini-sidebar"
                   style={miniSidebarStyle}
                 >
                   <div style={miniBrandStyle}>
@@ -251,7 +251,7 @@ export default function Hero() {
                     </span>
 
                     <span>
-                      TradePilot
+                      Norvexa
                     </span>
                   </div>
 
@@ -303,7 +303,7 @@ export default function Hero() {
                   </div>
 
                   <div
-                    className="tradepilot-mini-stats"
+                    className="Norvexa-mini-stats"
                     style={miniStatGridStyle}
                   >
                     <MiniStat
@@ -327,7 +327,7 @@ export default function Hero() {
                   </div>
 
                   <div
-                    className="tradepilot-mini-content"
+                    className="Norvexa-mini-content"
                     style={miniContentGridStyle}
                   >
                     <article style={miniChartCardStyle}>
@@ -409,7 +409,7 @@ export default function Hero() {
                       </div>
 
                       <span style={miniCardLabelStyle}>
-                        TRADEPILOT AI
+                        Norvexa
                       </span>
 
                       <strong style={aiCardTitleStyle}>
@@ -502,7 +502,7 @@ export default function Hero() {
 
         <section
           data-reveal
-          className="tradepilot-proof tp-reveal"
+          className="Norvexa-proof tp-reveal"
           style={proofStripStyle}
         >
           <span style={proofLeadStyle}>
@@ -648,13 +648,13 @@ export default function Hero() {
             rgba(10,22,40,0.98) !important;
         }
 
-        .tradepilot-proof span {
+        .Norvexa-proof span {
           transition:
             color 180ms ease,
             transform 180ms ease;
         }
 
-        .tradepilot-proof > span:not(:first-child):hover {
+        .Norvexa-proof > span:not(:first-child):hover {
           color: #cbd5e1 !important;
           transform:
             translateY(-1px);
@@ -685,34 +685,34 @@ export default function Hero() {
         }
 
         @media (max-width: 860px) {
-          .tradepilot-hero {
+          .Norvexa-hero {
             grid-template-columns: 1fr !important;
           }
 
-          .tradepilot-preview {
+          .Norvexa-preview {
             margin-top: 10px !important;
           }
         }
 
         @media (max-width: 620px) {
-          .tradepilot-nav-login {
+          .Norvexa-nav-login {
             display: none !important;
           }
 
-          .tradepilot-mini-sidebar {
+          .Norvexa-mini-sidebar {
             display: none !important;
           }
 
-          .tradepilot-mini-content {
+          .Norvexa-mini-content {
             grid-template-columns: 1fr !important;
           }
 
-          .tradepilot-mini-stats {
+          .Norvexa-mini-stats {
             grid-template-columns:
               repeat(2, minmax(0, 1fr)) !important;
           }
 
-          .tradepilot-proof {
+          .Norvexa-proof {
             justify-content: flex-start !important;
           }
         }

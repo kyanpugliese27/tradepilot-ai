@@ -51,7 +51,7 @@ export default function CommunityStats() {
           data,
           error: rpcError,
         } = await supabase.rpc(
-          "get_tradepilot_public_landing_stats"
+          "get_Norvexa_public_landing_stats"
         );
 
         if (rpcError) {
@@ -147,7 +147,7 @@ export default function CommunityStats() {
         >
           <div>
             <p style={eyebrowStyle}>
-              LIVE TRADEPILOT ACTIVITY
+              LIVE Norvexa ACTIVITY
             </p>
 
             <h2 style={titleStyle}>
@@ -157,7 +157,7 @@ export default function CommunityStats() {
             </h2>
 
             <p style={subtitleStyle}>
-              These numbers come from TradePilot itself,
+              These numbers come from Norvexa itself,
               so the homepage grows as the platform grows.
             </p>
           </div>
@@ -221,7 +221,7 @@ export default function CommunityStats() {
                     stats?.totalTrades
                   )
             }
-            text="Trades recorded across TradePilot paper portfolios."
+            text="Trades recorded across Norvexa paper portfolios."
           />
 
           <StatCard
@@ -260,7 +260,7 @@ export default function CommunityStats() {
                     stats?.premiumMembers
                   )
             }
-            text="Active TradePilot Premium memberships."
+            text="Active Norvexa Premium memberships."
             premium
           />
         </div>

@@ -44,15 +44,15 @@ const CACHE_MS = 15 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 7_000;
 
 const globalCache = globalThis as typeof globalThis & {
-  tradePilotFundamentalsCache?: Map<
+  NorvexaFundamentalsCache?: Map<
     string,
     CachedFundamentals
   >;
 };
 
 const fundamentalsCache =
-  globalCache.tradePilotFundamentalsCache ??
-  (globalCache.tradePilotFundamentalsCache =
+  globalCache.NorvexaFundamentalsCache ??
+  (globalCache.NorvexaFundamentalsCache =
     new Map());
 
 export async function GET(request: NextRequest) {
@@ -301,7 +301,7 @@ function fundamentalsJson(
     status: 200,
     headers: {
       ...noStoreHeaders(),
-      "X-TradePilot-Fundamentals-Cache":
+      "X-Norvexa-Fundamentals-Cache":
         cacheStatus,
     },
   });

@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     if (!premiumActive) {
       return NextResponse.json(
         {
-          error: "TradePilot Copilot requires Premium.",
+          error: "Norvexa Copilot requires Premium.",
           code: "PREMIUM_REQUIRED",
           upgradeUrl: "/premium",
         },
@@ -282,7 +282,7 @@ export async function POST(request: NextRequest) {
       model: "gpt-5-mini",
       store: false,
       instructions: `
-You are TradePilot Copilot, an educational investing assistant embedded throughout a paper-trading application.
+You are Norvexa Copilot, an educational investing assistant embedded throughout a paper-trading application.
 
 Use the supplied application context when it is relevant.
 

@@ -499,7 +499,7 @@ export default function SECFilingsCenter({
       >
         SEC filings are official company
         disclosures. Filing links open
-        outside TradePilot, and filing
+        outside Norvexa, and filing
         information may be delayed by
         the data provider.
       </p>

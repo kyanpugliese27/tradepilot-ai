@@ -747,7 +747,7 @@ export default function PortfolioAnalyticsPage() {
             }}
           >
             <p style={eyebrowStyle}>
-              TradePilot AI
+              Norvexa
             </p>
 
             <h2 style={{ margin: 0 }}>

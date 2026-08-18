@@ -148,7 +148,7 @@ export default function LeaderboardsPage() {
             data: result,
             error: rpcError,
           } = await supabase.rpc(
-            "get_tradepilot_leaderboard",
+            "get_Norvexa_leaderboard",
             {
               requested_period:
                 selectedPeriod,
@@ -225,7 +225,7 @@ export default function LeaderboardsPage() {
           data: result,
           error: rpcError,
         } = await supabase.rpc(
-          "get_tradepilot_following"
+          "get_Norvexa_following"
         );
 
         if (rpcError) {
@@ -299,7 +299,7 @@ export default function LeaderboardsPage() {
         data: result,
         error: rpcError,
       } = await supabase.rpc(
-        "toggle_tradepilot_follow",
+        "toggle_Norvexa_follow",
         {
           requested_username:
             normalized,
@@ -1152,7 +1152,7 @@ export default function LeaderboardsPage() {
             }}
           >
             Rankings use virtual
-            TradePilot performance only.
+            Norvexa performance only.
             They do not represent
             verified brokerage assets,
             real-money returns, or
@@ -2113,7 +2113,7 @@ function getPeriodDescription(
   if (
     period === "all_time"
   ) {
-    return "All public TradePilot paper-trading performance.";
+    return "All public Norvexa paper-trading performance.";
   }
 
   const startDate =

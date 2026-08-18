@@ -196,7 +196,7 @@ export default function AchievementToastProvider() {
 
       channel = supabase
         .channel(
-          `tradepilot-achievements-${userId}`
+          `Norvexa-achievements-${userId}`
         )
         .on(
           "postgres_changes",
@@ -370,7 +370,7 @@ export default function AchievementToastProvider() {
   return (
     <>
       <aside
-        className="tradepilot-achievement-toast"
+        className="Norvexa-achievement-toast"
         role="status"
         aria-live="polite"
         style={toastStyle}
@@ -416,7 +416,7 @@ export default function AchievementToastProvider() {
 
         <div style={footerStyle}>
           <span style={earnedStyle}>
-            New TradePilot badge
+            New Norvexa badge
           </span>
 
           <Link
@@ -434,13 +434,13 @@ export default function AchievementToastProvider() {
         </div>
 
         <div
-          className="tradepilot-achievement-progress"
+          className="Norvexa-achievement-progress"
           style={progressStyle}
         />
       </aside>
 
       <style jsx global>{`
-        @keyframes tradepilotAchievementIn {
+        @keyframes NorvexaAchievementIn {
           0% {
             opacity: 0;
             transform:
@@ -463,7 +463,7 @@ export default function AchievementToastProvider() {
           }
         }
 
-        @keyframes tradepilotAchievementGlow {
+        @keyframes NorvexaAchievementGlow {
           0%,
           100% {
             box-shadow:
@@ -482,7 +482,7 @@ export default function AchievementToastProvider() {
           }
         }
 
-        @keyframes tradepilotAchievementProgress {
+        @keyframes NorvexaAchievementProgress {
           from {
             transform:
               scaleX(1);
@@ -494,9 +494,9 @@ export default function AchievementToastProvider() {
           }
         }
 
-        .tradepilot-achievement-toast {
+        .Norvexa-achievement-toast {
           animation:
-            tradepilotAchievementIn
+            NorvexaAchievementIn
               420ms
               cubic-bezier(
                 0.2,
@@ -505,15 +505,15 @@ export default function AchievementToastProvider() {
                 1
               )
               both,
-            tradepilotAchievementGlow
+            NorvexaAchievementGlow
               1.6s
               ease-in-out
               2;
         }
 
-        .tradepilot-achievement-progress {
+        .Norvexa-achievement-progress {
           animation:
-            tradepilotAchievementProgress
+            NorvexaAchievementProgress
               ${TOAST_DURATION_MS}ms
               linear
               forwards;
@@ -522,15 +522,15 @@ export default function AchievementToastProvider() {
         @media
           (prefers-reduced-motion:
             reduce) {
-          .tradepilot-achievement-toast,
-          .tradepilot-achievement-progress {
+          .Norvexa-achievement-toast,
+          .Norvexa-achievement-progress {
             animation: none !important;
           }
         }
 
         @media
           (max-width: 620px) {
-          .tradepilot-achievement-toast {
+          .Norvexa-achievement-toast {
             left: 14px !important;
             right: 14px !important;
             bottom: 14px !important;

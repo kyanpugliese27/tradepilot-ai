@@ -168,7 +168,7 @@ export default function ScreenerPage() {
               }}
             >
               Describe the type of stock you want
-              to study. TradePilot ranks matches
+              to study. Norvexa ranks matches
               from a curated company universe using
               the financial metrics currently
               available in your app.
@@ -329,7 +329,7 @@ export default function ScreenerPage() {
                 }}
               >
                 <p style={eyebrowStyle}>
-                  TradePilot results
+                  Norvexa results
                 </p>
 
                 <h2 style={{ margin: 0 }}>

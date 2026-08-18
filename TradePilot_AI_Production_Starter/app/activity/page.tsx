@@ -193,7 +193,7 @@ export default function ActivityPage() {
                 textTransform: "uppercase",
               }}
             >
-              TradePilot AI
+              Norvexa
             </p>
 
             <h1

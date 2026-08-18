@@ -25,12 +25,12 @@ const NEWS_CACHE_MS = 5 * 60 * 1000;
 const STALE_NEWS_MAX_AGE_MS = 60 * 60 * 1000;
 
 const globalCache = globalThis as typeof globalThis & {
-  tradePilotNewsCache?: Map<string, CachedNews>;
+  NorvexaNewsCache?: Map<string, CachedNews>;
 };
 
 const newsCache =
-  globalCache.tradePilotNewsCache ??
-  (globalCache.tradePilotNewsCache = new Map());
+  globalCache.NorvexaNewsCache ??
+  (globalCache.NorvexaNewsCache = new Map());
 
 export async function GET(request: NextRequest) {
   const apiKey = process.env.FINNHUB_API_KEY;

@@ -726,7 +726,7 @@ export default function CompetitionsPage() {
         <p style={mutedStyle}>
           Create and join virtual
           paper-trading challenges with
-          the TradePilot community.
+          the Norvexa community.
         </p>
 
         {error && (
@@ -1112,7 +1112,7 @@ export default function CompetitionsPage() {
             rankings are virtual and do
             not represent real-money
             rewards unless separately
-            stated by TradePilot.
+            stated by Norvexa.
           </p>
         </div>
 

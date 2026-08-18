@@ -499,7 +499,7 @@ export default function NotificationsPage() {
             </h1>
 
             <p style={mutedStyle}>
-              Loading your TradePilot
+              Loading your Norvexa
               alerts and community
               updates.
             </p>
@@ -881,7 +881,7 @@ export default function NotificationsPage() {
               text={
                 notifications.length ===
                 0
-                  ? "Your TradePilot alerts and updates will appear here."
+                  ? "Your Norvexa alerts and updates will appear here."
                   : "There are no notifications matching this filter."
               }
             />

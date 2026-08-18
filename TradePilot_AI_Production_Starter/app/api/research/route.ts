@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
       model: "gpt-5-mini",
       store: false,
       instructions: `
-You are TradePilot AI Research, an educational investing research assistant inside a paper-trading application.
+You are Norvexa Research, an educational investing research assistant inside a paper-trading application.
 
 Use the supplied account, portfolio, watchlist, transaction, quote, fundamentals, and news context when relevant.
 

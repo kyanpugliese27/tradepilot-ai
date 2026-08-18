@@ -23,13 +23,13 @@ type CopilotResponse = {
 };
 
 const storageKey =
-  "tradepilot-copilot-session";
+  "Norvexa-copilot-session";
 
 const welcomeMessage: Message = {
   id: "welcome",
   role: "assistant",
   content:
-    "Hi — I’m TradePilot Copilot. Ask me about your paper portfolio, a stock, today’s market, your watchlist, or an investing concept.",
+    "Hi — I’m Norvexa Copilot. Ask me about your paper portfolio, a stock, today’s market, your watchlist, or an investing concept.",
   createdAt: new Date().toISOString(),
 };
 
@@ -42,7 +42,7 @@ const suggestions = [
   "Explain P/E ratio simply.",
 ];
 
-export default function TradePilotCopilot() {
+export default function NorvexaCopilot() {
   const pathname = usePathname();
 
   const [open, setOpen] =
@@ -280,13 +280,13 @@ export default function TradePilotCopilot() {
     <>
       {open && (
         <section
-          aria-label="TradePilot Copilot"
+          aria-label="Norvexa Copilot"
           style={panelStyle}
         >
           <div style={headerStyle}>
             <div>
               <p style={eyebrowStyle}>
-                TradePilot intelligence
+                Norvexa intelligence
               </p>
 
               <h2
@@ -408,7 +408,7 @@ export default function TradePilotCopilot() {
                 }
                 rows={1}
                 disabled={thinking}
-                placeholder="Ask TradePilot Copilot..."
+                placeholder="Ask Norvexa Copilot..."
                 style={textareaStyle}
               />
 
@@ -448,8 +448,8 @@ export default function TradePilotCopilot() {
         type="button"
         aria-label={
           open
-            ? "Close TradePilot Copilot"
-            : "Open TradePilot Copilot"
+            ? "Close Norvexa Copilot"
+            : "Open Norvexa Copilot"
         }
         onClick={() =>
           setOpen((current) => !current)
@@ -461,7 +461,7 @@ export default function TradePilotCopilot() {
 
       <style jsx global>{`
         @media (max-width: 620px) {
-          [aria-label="TradePilot Copilot"] {
+          [aria-label="Norvexa Copilot"] {
             left: 10px !important;
             right: 10px !important;
             bottom: 78px !important;
@@ -517,7 +517,7 @@ function MessageBubble({
         >
           {user
             ? "You"
-            : "TradePilot AI"}{" "}
+            : "Norvexa"}{" "}
           ·{" "}
           {new Date(
             message.createdAt

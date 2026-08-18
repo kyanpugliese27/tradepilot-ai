@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
           model: "gpt-5-mini",
           store: false,
           instructions: `
-You are TradePilot AI. Classify the short-term tone of each supplied stock quote using only its current daily price movement.
+You are Norvexa. Classify the short-term tone of each supplied stock quote using only its current daily price movement.
 
 Rules:
 - Do not use outside information.

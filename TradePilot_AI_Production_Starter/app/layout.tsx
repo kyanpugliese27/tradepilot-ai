@@ -4,7 +4,7 @@ import PremiumCopilotGate from "@/components/PremiumCopilotGate";
 import AchievementToastProvider from "@/components/AchievementToastProvider";
 
 export const metadata: Metadata = {
-  title: "TradePilot AI",
+  title: "Norvexa",
   description:
     "AI-powered investing research and education.",
   manifest: "/manifest.webmanifest",

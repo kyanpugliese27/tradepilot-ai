@@ -26,7 +26,7 @@ export default function AnalyticsPage() {
                 textTransform: "uppercase",
               }}
             >
-              TradePilot portfolio intelligence
+              Norvexa portfolio intelligence
             </p>
 
             <h1

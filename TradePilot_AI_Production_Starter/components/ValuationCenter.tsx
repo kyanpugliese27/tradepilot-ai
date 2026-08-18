@@ -412,7 +412,7 @@ export default function ValuationCenter({
           }}
         >
           <p style={eyebrowStyle}>
-            TradePilot AI
+            Norvexa
           </p>
 
           <h3 style={{ margin: 0 }}>

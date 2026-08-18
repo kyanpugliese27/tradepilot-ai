@@ -118,7 +118,7 @@ export default function FriendsPage() {
           data,
           error: rpcError,
         } = await supabase.rpc(
-          "get_tradepilot_friends"
+          "get_Norvexa_friends"
         );
 
         if (rpcError) {
@@ -583,7 +583,7 @@ export default function FriendsPage() {
         <p style={mutedStyle}>
           Find other traders, manage
           requests, and view your
-          TradePilot friends.
+          Norvexa friends.
         </p>
 
         {error && (
@@ -789,7 +789,7 @@ export default function FriendsPage() {
               }
               text={
                 activeTab === "friends"
-                  ? "Search the TradePilot community to connect with other traders."
+                  ? "Search the Norvexa community to connect with other traders."
                   : activeTab ===
                       "incoming"
                     ? "New friend requests will appear here."
@@ -894,7 +894,7 @@ export default function FriendsPage() {
             }}
           >
             Friend connections use your
-            public TradePilot profile.
+            public Norvexa profile.
             Email addresses and login
             information are never shown.
           </p>

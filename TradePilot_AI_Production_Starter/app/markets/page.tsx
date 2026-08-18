@@ -182,7 +182,7 @@ export default function MarketsPage() {
         >
           <div style={{ marginBottom: 18 }}>
             <p style={eyebrowStyle}>
-              TradePilot market intelligence
+              Norvexa market intelligence
             </p>
 
             <h1
