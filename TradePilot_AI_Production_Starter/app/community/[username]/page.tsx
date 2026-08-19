@@ -134,7 +134,7 @@ export default function PublicCommunityProfilePage() {
           data: result,
           error: rpcError,
         } = await supabase.rpc(
-          "get_Norvexa_public_profile",
+          "get_tradepilot_public_profile",
           {
             requested_username:
               username,
@@ -183,7 +183,7 @@ export default function PublicCommunityProfilePage() {
           data: result,
           error: rpcError,
         } = await supabase.rpc(
-          "get_Norvexa_follow_status",
+          "get_tradepilot_follow_status",
           {
             requested_username:
               username,
@@ -241,7 +241,7 @@ export default function PublicCommunityProfilePage() {
         data: result,
         error: rpcError,
       } = await supabase.rpc(
-        "toggle_Norvexa_follow",
+        "toggle_tradepilot_follow",
         {
           requested_username:
             username,

@@ -107,7 +107,7 @@ export default function CommunityPage() {
           data: result,
           error: rpcError,
         } = await supabase.rpc(
-          "get_Norvexa_community_stats"
+          "get_tradepilot_community_stats"
         );
 
         if (rpcError) {

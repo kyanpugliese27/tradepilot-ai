@@ -118,7 +118,7 @@ export default function FriendsPage() {
           data,
           error: rpcError,
         } = await supabase.rpc(
-          "get_Norvexa_friends"
+          "get_tradepilot_friends"
         );
 
         if (rpcError) {

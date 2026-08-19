@@ -51,7 +51,7 @@ export default function CommunityStats() {
           data,
           error: rpcError,
         } = await supabase.rpc(
-          "get_Norvexa_public_landing_stats"
+          "get_tradepilot_public_landing_stats"
         );
 
         if (rpcError) {

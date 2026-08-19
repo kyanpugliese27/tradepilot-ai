@@ -68,7 +68,7 @@ export async function awardBadge(
     data,
     error,
   } = await admin.rpc(
-    "award_Norvexa_badge",
+    "award_tradepilot_badge",
     {
       target_user_id:
         userId,

@@ -148,7 +148,7 @@ export default function LeaderboardsPage() {
             data: result,
             error: rpcError,
           } = await supabase.rpc(
-            "get_Norvexa_leaderboard",
+            "get_tradepilot_leaderboard",
             {
               requested_period:
                 selectedPeriod,
@@ -225,7 +225,7 @@ export default function LeaderboardsPage() {
           data: result,
           error: rpcError,
         } = await supabase.rpc(
-          "get_Norvexa_following"
+          "get_tradepilot_following"
         );
 
         if (rpcError) {
@@ -299,7 +299,7 @@ export default function LeaderboardsPage() {
         data: result,
         error: rpcError,
       } = await supabase.rpc(
-        "toggle_Norvexa_follow",
+        "toggle_tradepilot_follow",
         {
           requested_username:
             normalized,
