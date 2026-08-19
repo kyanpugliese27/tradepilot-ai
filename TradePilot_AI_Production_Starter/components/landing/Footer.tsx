@@ -19,7 +19,7 @@ export default function Footer() {
               style={brandStyle}
             >
               <span style={brandMarkStyle}>
-                T
+                N
               </span>
 
               <span>
@@ -89,6 +89,18 @@ export default function Footer() {
                 label: "Community",
                 href: "/#community",
               },
+              {
+                label: "Terms of Service",
+                href: "/terms",
+              },
+              {
+                label: "Privacy Policy",
+                href: "/privacy",
+              },
+              {
+                label: "Financial Disclaimer",
+                href: "/disclaimer",
+              },
             ]}
           />
 
@@ -118,10 +130,35 @@ export default function Footer() {
             © {year} Norvexa.
           </span>
 
-          <span style={disclaimerStyle}>
-            Educational purposes only.
-            Not financial advice.
-          </span>
+          <div style={bottomRightStyle}>
+            <div style={legalLinksStyle}>
+              <Link
+                href="/terms"
+                style={bottomLegalLinkStyle}
+              >
+                Terms
+              </Link>
+
+              <Link
+                href="/privacy"
+                style={bottomLegalLinkStyle}
+              >
+                Privacy
+              </Link>
+
+              <Link
+                href="/disclaimer"
+                style={bottomLegalLinkStyle}
+              >
+                Disclaimer
+              </Link>
+            </div>
+
+            <span style={disclaimerStyle}>
+              Educational purposes only.
+              Not financial advice.
+            </span>
+          </div>
         </div>
       </div>
 
@@ -319,6 +356,25 @@ const bottomBarStyle = {
     "1px solid rgba(255,255,255,0.05)",
   color: "#536072",
   fontSize: 8,
+};
+
+const bottomRightStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 14,
+  flexWrap: "wrap" as const,
+};
+
+const legalLinksStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  flexWrap: "wrap" as const,
+};
+
+const bottomLegalLinkStyle = {
+  color: "#64748b",
+  textDecoration: "none",
 };
 
 const disclaimerStyle = {
