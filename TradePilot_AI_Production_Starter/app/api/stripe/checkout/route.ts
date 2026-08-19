@@ -9,6 +9,15 @@ export async function POST(request: Request) {
     const stripeSecretKey =
       process.env.STRIPE_SECRET_KEY;
 
+    console.log(
+      "STRIPE MODE:",
+      stripeSecretKey?.startsWith("sk_live_")
+        ? "LIVE"
+        : stripeSecretKey?.startsWith("sk_test_")
+        ? "TEST"
+        : "UNKNOWN"
+    );
+
     const premiumPriceId =
       process.env.STRIPE_PREMIUM_PRICE_ID;
 
@@ -120,7 +129,7 @@ export async function POST(request: Request) {
               undefined,
 
             metadata: {
-              Norvexa_user_id:
+              tradepilot_user_id:
                 user.id,
             },
           }
@@ -195,13 +204,13 @@ export async function POST(request: Request) {
             user.id,
 
           metadata: {
-            Norvexa_user_id:
+            tradepilot_user_id:
               user.id,
           },
 
           subscription_data: {
             metadata: {
-              Norvexa_user_id:
+              tradepilot_user_id:
                 user.id,
             },
           },
