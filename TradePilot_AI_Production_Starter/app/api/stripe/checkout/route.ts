@@ -192,13 +192,15 @@ export async function POST(request: Request) {
           customer:
             customerId,
 
-          line_items: [
-            {
-              price:
-                premiumPriceId,
-              quantity: 1,
-            },
-          ],
+            payment_method_collection:
+            "if_required",
+            line_items: [
+              {
+                price:
+                  premiumPriceId,
+               quantity: 1,
+              },
+            ],
 
           client_reference_id:
             user.id,
