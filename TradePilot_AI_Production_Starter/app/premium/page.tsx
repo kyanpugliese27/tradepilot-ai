@@ -436,7 +436,7 @@ export default function PremiumPage() {
 
         <div style={noticeStyle}>
           <strong>
-            Stripe test mode first
+            Secure billing through Stripe
           </strong>
 
           <p
@@ -448,12 +448,10 @@ export default function PremiumPage() {
               lineHeight: 1.55,
             }}
           >
-            Keep Stripe in test mode
-            while we build and test the
-            subscription flow. We will
-            add customer billing
-            management and premium
-            feature locking next.
+            Premium subscriptions,
+            billing, payment methods,
+            and cancellations are managed
+            securely through Stripe.
           </p>
         </div>
 
