@@ -4,9 +4,7 @@ import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(
-  request: Request
-) {
+export async function POST(request: Request) {
   const stripeSecretKey =
     process.env.STRIPE_SECRET_KEY;
 
@@ -30,16 +28,13 @@ export async function POST(
         error:
           "Stripe or Supabase webhook environment variables are missing.",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 
-  const stripe =
-    new Stripe(
-      stripeSecretKey
-    );
+  const stripe = new Stripe(
+    stripeSecretKey
+  );
 
   const signature =
     request.headers.get(
@@ -52,9 +47,7 @@ export async function POST(
         error:
           "Missing Stripe signature.",
       },
-      {
-        status: 400,
-      }
+      { status: 400 }
     );
   }
 
@@ -81,9 +74,7 @@ export async function POST(
         error:
           "Invalid webhook signature.",
       },
-      {
-        status: 400,
-      }
+      { status: 400 }
     );
   }
 
@@ -111,6 +102,8 @@ export async function POST(
       const userId =
         session.metadata
           ?.Norvexa_user_id ||
+        session.metadata
+          ?.tradepilot_user_id ||
         session.client_reference_id;
 
       const customerId =
@@ -181,9 +174,7 @@ export async function POST(
         "customer.subscription.created",
         "customer.subscription.updated",
         "customer.subscription.deleted",
-      ].includes(
-        event.type
-      )
+      ].includes(event.type)
     ) {
       const subscription =
         event.data
@@ -196,11 +187,9 @@ export async function POST(
       );
     }
 
-    return NextResponse.json(
-      {
-        received: true,
-      }
-    );
+    return NextResponse.json({
+      received: true,
+    });
   } catch (error) {
     console.error(
       "Stripe webhook processing error:",
@@ -214,9 +203,7 @@ export async function POST(
             ? error.message
             : "Webhook processing failed.",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }
@@ -235,6 +222,8 @@ async function syncSubscription(
   let userId =
     subscription.metadata
       ?.Norvexa_user_id ||
+    subscription.metadata
+      ?.tradepilot_user_id ||
     null;
 
   if (!userId) {
@@ -243,12 +232,12 @@ async function syncSubscription(
         customerId
       );
 
-    if (
-      !customer.deleted
-    ) {
+    if (!customer.deleted) {
       userId =
         customer.metadata
           ?.Norvexa_user_id ||
+        customer.metadata
+          ?.tradepilot_user_id ||
         null;
     }
   }
@@ -257,6 +246,8 @@ async function syncSubscription(
     const {
       data:
         existingSubscription,
+      error:
+        lookupError,
     } =
       await supabaseAdmin
         .from(
@@ -270,6 +261,10 @@ async function syncSubscription(
           customerId
         )
         .maybeSingle();
+
+    if (lookupError) {
+      throw lookupError;
+    }
 
     userId =
       existingSubscription
