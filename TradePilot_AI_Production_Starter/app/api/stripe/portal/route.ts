@@ -19,10 +19,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const stripe =
-      new Stripe(
-        stripeSecretKey
-      );
+    const stripe = new Stripe(
+      stripeSecretKey
+    );
 
     const supabase =
       await createClient();
@@ -48,15 +47,17 @@ export async function POST(request: Request) {
 
     const {
       data: subscription,
-      error:
-        subscriptionError,
+      error: subscriptionError,
     } = await supabase
       .from(
         "premium_subscriptions"
       )
       .select(
         `
-          stripe_customer_id
+          plan,
+          status,
+          stripe_customer_id,
+          stripe_subscription_id
         `
       )
       .eq(
@@ -79,10 +80,45 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "No Stripe customer was found for this account.",
+            "No Stripe customer is connected to this account.",
         },
         { status: 404 }
       );
+    }
+
+    // Make sure the customer ID actually exists
+    // in the Stripe account connected to this deployment.
+    try {
+      const customer =
+        await stripe.customers.retrieve(
+          customerId
+        );
+
+      if (customer.deleted) {
+        return NextResponse.json(
+          {
+            error:
+              "The Stripe customer connected to this account has been deleted.",
+          },
+          { status: 404 }
+        );
+      }
+    } catch (error) {
+      if (
+        error instanceof Stripe.errors.StripeInvalidRequestError &&
+        error.code ===
+          "resource_missing"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "The Stripe customer connected to this account could not be found.",
+          },
+          { status: 404 }
+        );
+      }
+
+      throw error;
     }
 
     const requestUrl =
@@ -105,16 +141,19 @@ export async function POST(request: Request) {
             customerId,
 
           return_url:
-            `${origin}/premium`,
+            `${origin}/settings/subscription`,
         }
       );
 
-    return NextResponse.json(
-      {
-        url:
-          portalSession.url,
-      }
-    );
+    if (!portalSession.url) {
+      throw new Error(
+        "Stripe did not return a billing portal URL."
+      );
+    }
+
+    return NextResponse.json({
+      url: portalSession.url,
+    });
   } catch (error) {
     console.error(
       "Stripe customer portal error:",
