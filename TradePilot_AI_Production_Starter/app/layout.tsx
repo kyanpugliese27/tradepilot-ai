@@ -1,5 +1,8 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type {
+  Metadata,
+  Viewport,
+} from "next";
 import PremiumCopilotGate from "@/components/PremiumCopilotGate";
 import AchievementToastProvider from "@/components/AchievementToastProvider";
 
@@ -8,6 +11,12 @@ export const metadata: Metadata = {
   description:
     "AI-powered investing research and education.",
   manifest: "/manifest.webmanifest",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

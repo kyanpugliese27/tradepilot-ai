@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useState,
 } from "react";
 import Link from "next/link";
@@ -91,6 +92,36 @@ export default function Sidebar() {
     setCollapsed,
   ] = useState(false);
 
+  const [
+    mobileOpen,
+    setMobileOpen,
+  ] = useState(false);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) {
+      document.body.style.overflow = "";
+      return;
+    }
+
+    const media =
+      window.matchMedia(
+        "(max-width: 900px)"
+      );
+
+    if (media.matches) {
+      document.body.style.overflow =
+        "hidden";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
+
   async function signOut() {
     const url =
       process.env
@@ -113,6 +144,8 @@ export default function Sidebar() {
     await supabase.auth
       .signOut();
 
+    setMobileOpen(false);
+
     router.replace("/");
     router.refresh();
   }
@@ -125,250 +158,486 @@ export default function Sidebar() {
       path + "/"
     );
 
+  function closeMobileMenu() {
+    setMobileOpen(false);
+  }
+
   return (
-    <aside
-      className="sidebar"
-      style={{
-        ...sidebarStyle,
-        width: collapsed
-          ? 78
-          : 244,
-      }}
-    >
-      <div style={topStyle}>
+    <>
+      <button
+        type="button"
+        className="mobile-sidebar-toggle"
+        onClick={() =>
+          setMobileOpen(
+            (current) => !current
+          )
+        }
+        aria-label={
+          mobileOpen
+            ? "Close navigation"
+            : "Open navigation"
+        }
+        aria-expanded={mobileOpen}
+      >
+        <span style={mobileMenuLineStyle} />
+        <span style={mobileMenuLineStyle} />
+        <span style={mobileMenuLineStyle} />
+      </button>
+
+      <button
+        type="button"
+        className={`mobile-sidebar-overlay ${
+          mobileOpen
+            ? "mobile-sidebar-overlay-open"
+            : ""
+        }`}
+        onClick={closeMobileMenu}
+        aria-label="Close navigation"
+        tabIndex={
+          mobileOpen ? 0 : -1
+        }
+      />
+
+      <aside
+        className={`sidebar ${
+          mobileOpen
+            ? "mobile-sidebar-open"
+            : ""
+        }`}
+        style={{
+          ...sidebarStyle,
+          width: collapsed
+            ? 78
+            : 244,
+        }}
+      >
+        <div style={topStyle}>
+          <div
+            style={{
+              ...brandWrapStyle,
+              justifyContent:
+                collapsed
+                  ? "center"
+                  : "space-between",
+            }}
+          >
+            {!collapsed && (
+              <div className="brand">
+                Norvexa{" "}
+                <span>AI</span>
+              </div>
+            )}
+
+            {collapsed && (
+              <div style={collapsedBrandStyle}>
+                N
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="desktop-sidebar-toggle"
+              onClick={() =>
+                setCollapsed(
+                  (current) =>
+                    !current
+                )
+              }
+              aria-label={
+                collapsed
+                  ? "Expand sidebar"
+                  : "Collapse sidebar"
+              }
+              title={
+                collapsed
+                  ? "Expand sidebar"
+                  : "Collapse sidebar"
+              }
+              style={menuButtonStyle}
+            >
+              <span style={menuLineStyle} />
+              <span style={menuLineStyle} />
+              <span style={menuLineStyle} />
+            </button>
+
+            <button
+              type="button"
+              className="mobile-sidebar-close"
+              onClick={closeMobileMenu}
+              aria-label="Close navigation"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+
         <div
-          style={{
-            ...brandWrapStyle,
-            justifyContent:
-              collapsed
-                ? "center"
-                : "space-between",
-          }}
+          className="sidebar-scroll-area"
+          style={scrollAreaStyle}
         >
-          {!collapsed && (
-            <div className="brand">
-              Norvexa{" "}
-              <span>AI</span>
-            </div>
-          )}
+          <nav style={navStyle}>
+            <NavLink
+              icon="📊"
+              label="Dashboard"
+              href="/dashboard"
+              active={isActive(
+                "/dashboard"
+              )}
+              collapsed={
+                collapsed
+              }
+              onNavigate={
+                closeMobileMenu
+              }
+            />
 
-          {collapsed && (
-            <div style={collapsedBrandStyle}>
-              T
-            </div>
-          )}
+            <NavSection
+              title="Market"
+              collapsed={
+                collapsed
+              }
+            >
+              {MARKET_ITEMS.map(
+                (item) => (
+                  <NavLink
+                    key={
+                      item.href
+                    }
+                    {...item}
+                    active={isActive(
+                      item.matchPath ??
+                        item.href.split(
+                          "#"
+                        )[0]
+                    )}
+                    collapsed={
+                      collapsed
+                    }
+                    onNavigate={
+                      closeMobileMenu
+                    }
+                  />
+                )
+              )}
+            </NavSection>
 
+            <NavSection
+              title="AI Tools"
+              collapsed={
+                collapsed
+              }
+            >
+              {AI_ITEMS.map(
+                (item) => (
+                  <NavLink
+                    key={
+                      item.href
+                    }
+                    {...item}
+                    active={isActive(
+                      item.href
+                    )}
+                    collapsed={
+                      collapsed
+                    }
+                    onNavigate={
+                      closeMobileMenu
+                    }
+                  />
+                )
+              )}
+            </NavSection>
+
+            <NavSection
+              title="Portfolio & Community"
+              collapsed={
+                collapsed
+              }
+            >
+              {PORTFOLIO_COMMUNITY_ITEMS.map(
+                (item) => (
+                  <NavLink
+                    key={
+                      item.href
+                    }
+                    {...item}
+                    active={
+                      item.label ===
+                      "Portfolio"
+                        ? false
+                        : isActive(
+                            item.matchPath ??
+                              item.href.split(
+                                "#"
+                              )[0]
+                          )
+                    }
+                    collapsed={
+                      collapsed
+                    }
+                    onNavigate={
+                      closeMobileMenu
+                    }
+                  />
+                )
+              )}
+            </NavSection>
+
+            <div style={dividerStyle} />
+
+            <NavLink
+              icon="⚙️"
+              label="Settings"
+              href="/settings"
+              active={isActive(
+                "/settings"
+              )}
+              collapsed={
+                collapsed
+              }
+              onNavigate={
+                closeMobileMenu
+              }
+            />
+          </nav>
+        </div>
+
+        <div style={bottomStyle}>
           <button
             type="button"
-            onClick={() =>
-              setCollapsed(
-                (current) =>
-                  !current
-              )
-            }
-            aria-label={
-              collapsed
-                ? "Expand sidebar"
-                : "Collapse sidebar"
-            }
+            onClick={signOut}
+            className="side-link"
             title={
               collapsed
-                ? "Expand sidebar"
-                : "Collapse sidebar"
+                ? "Sign Out"
+                : undefined
             }
-            style={menuButtonStyle}
+            style={{
+              ...signOutStyle,
+              justifyContent:
+                collapsed
+                  ? "center"
+                  : "flex-start",
+            }}
           >
-            <span style={menuLineStyle} />
-            <span style={menuLineStyle} />
-            <span style={menuLineStyle} />
+            <span style={navIconStyle}>
+              🚪
+            </span>
+
+            {!collapsed && (
+              <span>
+                Sign Out
+              </span>
+            )}
           </button>
         </div>
-      </div>
 
-      <div
-        className="sidebar-scroll-area"
-        style={scrollAreaStyle}
-      >
-        <nav style={navStyle}>
-          <NavLink
-            icon="📊"
-            label="Dashboard"
-            href="/dashboard"
-            active={isActive(
-              "/dashboard"
-            )}
-            collapsed={
-              collapsed
-            }
-          />
-
-          <NavSection
-            title="Market"
-            collapsed={
-              collapsed
-            }
-          >
-            {MARKET_ITEMS.map(
-              (item) => (
-                <NavLink
-                  key={
-                    item.href
-                  }
-                  {...item}
-                  active={isActive(
-                    item.matchPath ??
-                      item.href.split(
-                        "#"
-                      )[0]
-                  )}
-                  collapsed={
-                    collapsed
-                  }
-                />
-              )
-            )}
-          </NavSection>
-
-          <NavSection
-            title="AI Tools"
-            collapsed={
-              collapsed
-            }
-          >
-            {AI_ITEMS.map(
-              (item) => (
-                <NavLink
-                  key={
-                    item.href
-                  }
-                  {...item}
-                  active={isActive(
-                    item.href
-                  )}
-                  collapsed={
-                    collapsed
-                  }
-                />
-              )
-            )}
-          </NavSection>
-
-          <NavSection
-            title="Portfolio & Community"
-            collapsed={
-              collapsed
-            }
-          >
-            {PORTFOLIO_COMMUNITY_ITEMS.map(
-              (item) => (
-                <NavLink
-                  key={
-                    item.href
-                  }
-                  {...item}
-                  active={
-                    item.label ===
-                    "Portfolio"
-                      ? false
-                      : isActive(
-                          item.matchPath ??
-                            item.href.split(
-                              "#"
-                            )[0]
-                        )
-                  }
-                  collapsed={
-                    collapsed
-                  }
-                />
-              )
-            )}
-          </NavSection>
-
-          <div style={dividerStyle} />
-
-          <NavLink
-            icon="⚙️"
-            label="Settings"
-            href="/settings"
-            active={isActive(
-              "/settings"
-            )}
-            collapsed={
-              collapsed
-            }
-          />
-        </nav>
-      </div>
-
-      <div style={bottomStyle}>
-        <button
-          type="button"
-          onClick={signOut}
-          className="side-link"
-          title={
-            collapsed
-              ? "Sign Out"
-              : undefined
-          }
-          style={{
-            ...signOutStyle,
-            justifyContent:
-              collapsed
-                ? "center"
-                : "flex-start",
-          }}
-        >
-          <span style={navIconStyle}>
-            🚪
-          </span>
-
-          {!collapsed && (
-            <span>
-              Sign Out
-            </span>
-          )}
-        </button>
-      </div>
-
-      <style jsx global>{`
-        .sidebar-scroll-area {
-          scrollbar-width: thin;
-          scrollbar-color:
-            rgba(148, 163, 184, 0.3)
-            transparent;
-        }
-
-        .sidebar-scroll-area::-webkit-scrollbar {
-          width: 6px;
-        }
-
-        .sidebar-scroll-area::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
-        .sidebar-scroll-area::-webkit-scrollbar-thumb {
-          background:
-            rgba(148, 163, 184, 0.25);
-          border-radius: 999px;
-        }
-
-        .sidebar-scroll-area::-webkit-scrollbar-thumb:hover {
-          background:
-            rgba(148, 163, 184, 0.4);
-        }
-
-        @media (max-width: 900px) {
-          .sidebar {
-            width: 78px !important;
+        <style jsx global>{`
+          .sidebar-scroll-area {
+            scrollbar-width: thin;
+            scrollbar-color:
+              rgba(148, 163, 184, 0.3)
+              transparent;
           }
 
-          .sidebar .brand {
-            display: none !important;
+          .sidebar-scroll-area::-webkit-scrollbar {
+            width: 6px;
           }
-        }
-      `}</style>
-    </aside>
+
+          .sidebar-scroll-area::-webkit-scrollbar-track {
+            background: transparent;
+          }
+
+          .sidebar-scroll-area::-webkit-scrollbar-thumb {
+            background:
+              rgba(148, 163, 184, 0.25);
+            border-radius: 999px;
+          }
+
+          .sidebar-scroll-area::-webkit-scrollbar-thumb:hover {
+            background:
+              rgba(148, 163, 184, 0.4);
+          }
+
+          .mobile-sidebar-toggle,
+          .mobile-sidebar-overlay,
+          .mobile-sidebar-close {
+            display: none;
+          }
+
+          @media (max-width: 900px) {
+            .desktop-sidebar-toggle {
+              display: none !important;
+            }
+
+            .mobile-sidebar-toggle {
+              position: fixed;
+              top:
+                max(
+                  14px,
+                  env(safe-area-inset-top)
+                );
+              left:
+                max(
+                  14px,
+                  env(safe-area-inset-left)
+                );
+              z-index: 1202;
+
+              width: 46px;
+              height: 46px;
+
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 5px;
+
+              padding: 0;
+              border:
+                1px solid
+                rgba(255,255,255,0.11);
+              border-radius: 13px;
+
+              background:
+                rgba(6,14,26,0.94);
+              backdrop-filter:
+                blur(14px);
+              -webkit-backdrop-filter:
+                blur(14px);
+
+              box-shadow:
+                0 10px 28px
+                rgba(0,0,0,0.32);
+
+              cursor: pointer;
+            }
+
+            .mobile-sidebar-overlay {
+              position: fixed;
+              inset: 0;
+              z-index: 1199;
+
+              display: block;
+
+              width: 100%;
+              height: 100%;
+
+              padding: 0;
+              border: 0;
+
+              background:
+                rgba(0,0,0,0.56);
+
+              opacity: 0;
+              visibility: hidden;
+              pointer-events: none;
+
+              transition:
+                opacity 180ms ease,
+                visibility 180ms ease;
+            }
+
+            .mobile-sidebar-overlay-open {
+              opacity: 1;
+              visibility: visible;
+              pointer-events: auto;
+            }
+
+            .sidebar {
+              position: fixed !important;
+              top: 0 !important;
+              left: 0 !important;
+
+              z-index: 1200;
+
+              width:
+                min(
+                  84vw,
+                  310px
+                ) !important;
+
+              max-width: 310px;
+
+              height: 100vh !important;
+              height: 100dvh !important;
+
+              padding-top:
+                env(safe-area-inset-top);
+
+              transform:
+                translateX(-105%);
+
+              transition:
+                transform 220ms ease
+                !important;
+
+              box-shadow:
+                24px 0 60px
+                rgba(0,0,0,0.42);
+
+              border-right:
+                1px solid
+                rgba(255,255,255,0.08)
+                !important;
+            }
+
+            .mobile-sidebar-open {
+              transform:
+                translateX(0);
+            }
+
+            .sidebar .brand {
+              display: block !important;
+            }
+
+            .mobile-sidebar-open
+              .mobile-sidebar-close {
+              width: 36px;
+              height: 36px;
+
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+
+              flex-shrink: 0;
+
+              padding: 0;
+
+              border:
+                1px solid
+                rgba(255,255,255,0.08);
+              border-radius: 10px;
+
+              background:
+                rgba(255,255,255,0.03);
+
+              color: #cbd5e1;
+
+              font-size: 24px;
+              line-height: 1;
+
+              cursor: pointer;
+            }
+
+            .sidebar-scroll-area {
+              -webkit-overflow-scrolling:
+                touch;
+            }
+          }
+
+          @media (max-width: 480px) {
+            .sidebar {
+              width:
+                min(
+                  88vw,
+                  300px
+                ) !important;
+            }
+          }
+        `}</style>
+      </aside>
+    </>
   );
 }
 
@@ -408,9 +677,11 @@ function NavLink({
   active,
   collapsed,
   externalAnchor = false,
+  onNavigate,
 }: NavItem & {
   active: boolean;
   collapsed: boolean;
+  onNavigate?: () => void;
 }) {
   const content = (
     <>
@@ -457,6 +728,7 @@ function NavLink({
             : undefined
         }
         style={sharedStyle}
+        onClick={onNavigate}
       >
         {content}
       </a>
@@ -477,6 +749,7 @@ function NavLink({
           : undefined
       }
       style={sharedStyle}
+      onClick={onNavigate}
     >
       {content}
     </Link>
@@ -502,7 +775,8 @@ const sidebarStyle = {
 
 const topStyle = {
   flexShrink: 0,
-  padding: "18px 14px 14px",
+  padding:
+    "18px 14px 14px",
   borderBottom:
     "1px solid rgba(255,255,255,0.055)",
 };
@@ -552,6 +826,13 @@ const menuLineStyle = {
   height: 1.5,
   borderRadius: 999,
   background: "#9ca3af",
+};
+
+const mobileMenuLineStyle = {
+  width: 19,
+  height: 2,
+  borderRadius: 999,
+  background: "#cbd5e1",
 };
 
 const scrollAreaStyle = {
