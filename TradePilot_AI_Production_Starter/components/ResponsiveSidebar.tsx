@@ -23,13 +23,18 @@ export default function ResponsiveSidebar() {
           display: none;
         }
 
-        @media (max-width: 900px) {
+        /*
+          Only switch to the mobile navigation on an actual
+          touch-style mobile device. A narrow desktop browser
+          window will keep the desktop sidebar.
+        */
+        @media (max-width: 900px) and (hover: none) and (pointer: coarse) {
           .norvexa-desktop-sidebar {
             display: none !important;
           }
 
           .norvexa-mobile-sidebar {
-            display: block;
+            display: block !important;
           }
         }
       `}</style>

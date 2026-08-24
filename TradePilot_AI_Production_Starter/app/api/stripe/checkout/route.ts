@@ -4,22 +4,21 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+type PremiumPlan = "monthly" | "yearly" | "lifetime";
+
 export async function POST(request: Request) {
   try {
     const stripeSecretKey =
       process.env.STRIPE_SECRET_KEY;
 
-    console.log(
-      "STRIPE MODE:",
-      stripeSecretKey?.startsWith("sk_live_")
-        ? "LIVE"
-        : stripeSecretKey?.startsWith("sk_test_")
-        ? "TEST"
-        : "UNKNOWN"
-    );
+    const monthlyPriceId =
+      process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID;
 
-    const premiumPriceId =
-      process.env.STRIPE_PREMIUM_PRICE_ID;
+    const yearlyPriceId =
+      process.env.STRIPE_PREMIUM_YEARLY_PRICE_ID;
+
+    const lifetimePriceId =
+      process.env.STRIPE_PREMIUM_LIFETIME_PRICE_ID;
 
     if (!stripeSecretKey) {
       return NextResponse.json(
@@ -31,11 +30,15 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!premiumPriceId) {
+    if (
+      !monthlyPriceId ||
+      !yearlyPriceId ||
+      !lifetimePriceId
+    ) {
       return NextResponse.json(
         {
           error:
-            "STRIPE_PREMIUM_PRICE_ID is missing.",
+            "One or more Norvexa Premium Stripe Price IDs are missing.",
         },
         { status: 500 }
       );
@@ -68,6 +71,48 @@ export async function POST(request: Request) {
       );
     }
 
+    let body: {
+      plan?: PremiumPlan;
+    } = {};
+
+    try {
+      body =
+        await request.json();
+    } catch {
+      body = {};
+    }
+
+    const selectedPlan =
+      body.plan;
+
+    if (
+      selectedPlan !== "monthly" &&
+      selectedPlan !== "yearly" &&
+      selectedPlan !== "lifetime"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Please choose monthly, yearly, or lifetime Premium.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const priceId =
+      selectedPlan === "monthly"
+        ? monthlyPriceId
+        : selectedPlan === "yearly"
+        ? yearlyPriceId
+        : lifetimePriceId;
+
+    const checkoutMode:
+      | "subscription"
+      | "payment" =
+      selectedPlan === "lifetime"
+        ? "payment"
+        : "subscription";
+
     const {
       data: existingSubscription,
       error: subscriptionError,
@@ -96,20 +141,22 @@ export async function POST(request: Request) {
       );
     }
 
-    if (
+    const alreadyHasPremium =
       existingSubscription?.plan ===
         "premium" &&
       [
         "active",
         "trialing",
+        "lifetime",
       ].includes(
         existingSubscription.status
-      )
-    ) {
+      );
+
+    if (alreadyHasPremium) {
       return NextResponse.json(
         {
           error:
-            "You already have an active Premium subscription.",
+            "You already have active Norvexa Premium access.",
         },
         { status: 409 }
       );
@@ -119,6 +166,23 @@ export async function POST(request: Request) {
       existingSubscription
         ?.stripe_customer_id ||
       null;
+
+    if (customerId) {
+      try {
+        const existingCustomer =
+          await stripe.customers.retrieve(
+            customerId
+          );
+
+        if (
+          existingCustomer.deleted
+        ) {
+          customerId = null;
+        }
+      } catch {
+        customerId = null;
+      }
+    }
 
     if (!customerId) {
       const customer =
@@ -148,12 +212,17 @@ export async function POST(request: Request) {
           {
             user_id:
               user.id,
+
             plan:
-              existingSubscription?.plan ||
+              existingSubscription
+                ?.plan ||
               "free",
+
             status:
-              existingSubscription?.status ||
+              existingSubscription
+                ?.status ||
               "free",
+
             stripe_customer_id:
               customerId,
           },
@@ -183,49 +252,91 @@ export async function POST(request: Request) {
       configuredSiteUrl ||
       requestUrl.origin;
 
+    const commonMetadata = {
+      Norvexa_user_id:
+        user.id,
+
+      Norvexa_plan:
+        selectedPlan,
+    };
+
     const session =
       await stripe.checkout.sessions.create(
-        {
-          mode:
-            "subscription",
+        checkoutMode ===
+          "subscription"
+          ? {
+              mode:
+                "subscription",
 
-          customer:
-            customerId,
+              customer:
+                customerId,
 
-            payment_method_collection:
-            "if_required",
-            line_items: [
-              {
-                price:
-                  premiumPriceId,
-               quantity: 1,
-              },
-            ],
+              payment_method_collection:
+                "if_required",
 
-          client_reference_id:
-            user.id,
+              line_items: [
+                {
+                  price:
+                    priceId,
+                  quantity: 1,
+                },
+              ],
 
-          metadata: {
-            Norvexa_user_id:
-              user.id,
-          },
-
-          subscription_data: {
-            metadata: {
-              Norvexa_user_id:
+              client_reference_id:
                 user.id,
-            },
-          },
 
-          success_url:
-            `${origin}/premium?success=1&session_id={CHECKOUT_SESSION_ID}`,
+              metadata:
+                commonMetadata,
 
-          cancel_url:
-            `${origin}/premium?canceled=1`,
+              subscription_data: {
+                metadata:
+                  commonMetadata,
+              },
 
-          allow_promotion_codes:
-            true,
-        }
+              success_url:
+                `${origin}/premium?success=1&plan=${selectedPlan}&session_id={CHECKOUT_SESSION_ID}`,
+
+              cancel_url:
+                `${origin}/premium?canceled=1`,
+
+              allow_promotion_codes:
+                true,
+            }
+          : {
+              mode:
+                "payment",
+
+              customer:
+                customerId,
+
+              line_items: [
+                {
+                  price:
+                    priceId,
+                  quantity: 1,
+                },
+              ],
+
+              client_reference_id:
+                user.id,
+
+              metadata:
+                commonMetadata,
+
+              payment_intent_data: {
+                metadata:
+                  commonMetadata,
+              },
+
+              success_url:
+                `${origin}/premium?success=1&plan=lifetime&session_id={CHECKOUT_SESSION_ID}`,
+
+              cancel_url:
+                `${origin}/premium?canceled=1`,
+
+              allow_promotion_codes:
+                true,
+            }
       );
 
     if (!session.url) {
@@ -236,7 +347,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        url: session.url,
+        url:
+          session.url,
+
+        plan:
+          selectedPlan,
       }
     );
   } catch (error) {

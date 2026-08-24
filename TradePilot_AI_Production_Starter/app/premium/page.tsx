@@ -19,6 +19,11 @@ type SubscriptionRow = {
   cancel_at_period_end: boolean;
 };
 
+type PremiumPlan =
+  | "monthly"
+  | "yearly"
+  | "lifetime";
+
 export default function PremiumPage() {
   const router = useRouter();
 
@@ -30,8 +35,13 @@ export default function PremiumPage() {
   const [loading, setLoading] =
     useState(true);
 
-  const [upgrading, setUpgrading] =
-    useState(false);
+  const [
+    upgradingPlan,
+    setUpgradingPlan,
+  ] =
+    useState<PremiumPlan | null>(
+      null
+    );
 
   const [error, setError] =
     useState("");
@@ -112,9 +122,11 @@ export default function PremiumPage() {
     }
   }
 
-  async function upgradeToPremium() {
+  async function upgradeToPremium(
+    plan: PremiumPlan
+  ) {
     try {
-      setUpgrading(true);
+      setUpgradingPlan(plan);
       setError("");
 
       const response =
@@ -122,6 +134,13 @@ export default function PremiumPage() {
           "/api/stripe/checkout",
           {
             method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              plan,
+            }),
           }
         );
 
@@ -147,7 +166,7 @@ export default function PremiumPage() {
           : "Unable to start Checkout."
       );
 
-      setUpgrading(false);
+      setUpgradingPlan(null);
     }
   }
 
@@ -221,7 +240,7 @@ export default function PremiumPage() {
           style={{
             display: "grid",
             gridTemplateColumns:
-              "repeat(2, minmax(0, 1fr))",
+              "repeat(4, minmax(0, 1fr))",
             gap: 16,
             marginTop: 25,
           }}
@@ -235,11 +254,20 @@ export default function PremiumPage() {
               style={{
                 margin:
                   "8px 0 0",
-                fontSize: 28,
+                fontSize: 27,
               }}
             >
               Norvexa Free
             </h2>
+
+            <div style={priceWrapStyle}>
+              <strong style={priceStyle}>
+                $0
+              </strong>
+              <span style={pricePeriodStyle}>
+                forever
+              </span>
+            </div>
 
             <p style={mutedStyle}>
               Core investing research
@@ -289,15 +317,15 @@ export default function PremiumPage() {
               }}
             >
               <p style={premiumPlanLabelStyle}>
-                PREMIUM
+                MONTHLY
               </p>
 
               <span
                 style={
-                  recommendedStyle
+                  flexibleStyle
                 }
               >
-                Best experience
+                Flexible
               </span>
             </div>
 
@@ -305,16 +333,24 @@ export default function PremiumPage() {
               style={{
                 margin:
                   "8px 0 0",
-                fontSize: 28,
+                fontSize: 27,
               }}
             >
-              Norvexa Premium
+              Premium Monthly
             </h2>
 
+            <div style={priceWrapStyle}>
+              <strong style={priceStyle}>
+                $79.99
+              </strong>
+              <span style={pricePeriodStyle}>
+                / month
+              </span>
+            </div>
+
             <p style={mutedStyle}>
-              Advanced Norvexa
-              features for users who
-              want the full platform.
+              Full Premium access with
+              simple month-to-month billing.
             </p>
 
             <Feature>
@@ -326,44 +362,266 @@ export default function PremiumPage() {
             </Feature>
 
             <Feature>
-              Advanced portfolio
-              analytics
+              Advanced portfolio analytics
             </Feature>
 
             <Feature>
-              Premium screeners and
-              investing tools
+              Premium screeners and tools
             </Feature>
 
             <Feature>
-              Future premium features
+              Future Premium features
             </Feature>
 
             {premium ? (
-              <div
-                style={
-                  premiumActiveStyle
-                }
-              >
+              <div style={premiumActiveStyle}>
                 ✓ Premium is active
               </div>
             ) : (
               <button
                 type="button"
-                onClick={
-                  upgradeToPremium
+                onClick={() =>
+                  upgradeToPremium(
+                    "monthly"
+                  )
                 }
                 disabled={
-                  upgrading ||
+                  upgradingPlan !==
+                    null ||
                   loading
                 }
                 style={
                   upgradeButtonStyle
                 }
               >
-                {upgrading
+                {upgradingPlan ===
+                "monthly"
                   ? "Opening Stripe..."
-                  : "Upgrade to Premium"}
+                  : "Choose Monthly"}
+              </button>
+            )}
+          </article>
+
+          <article
+            style={{
+              ...premiumCardStyle,
+              border:
+                "1px solid rgba(251,191,36,0.52)",
+              boxShadow:
+                "0 16px 50px rgba(251,191,36,0.08)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems:
+                  "center",
+                justifyContent:
+                  "space-between",
+                gap: 10,
+              }}
+            >
+              <p style={premiumPlanLabelStyle}>
+                YEARLY
+              </p>
+
+              <span
+                style={
+                  recommendedStyle
+                }
+              >
+                Best value
+              </span>
+            </div>
+
+            <h2
+              style={{
+                margin:
+                  "8px 0 0",
+                fontSize: 27,
+              }}
+            >
+              Premium Yearly
+            </h2>
+
+            <div style={priceWrapStyle}>
+              <strong style={priceStyle}>
+                $699.99
+              </strong>
+              <span style={pricePeriodStyle}>
+                / year
+              </span>
+            </div>
+
+            <p
+              style={{
+                ...mutedStyle,
+                marginBottom: 8,
+              }}
+            >
+              About $58.33/month.
+              Save $259.89 per year
+              versus monthly billing.
+            </p>
+
+            <Feature>
+              Everything in Free
+            </Feature>
+
+            <Feature>
+              Premium AI research
+            </Feature>
+
+            <Feature>
+              Advanced portfolio analytics
+            </Feature>
+
+            <Feature>
+              Premium screeners and tools
+            </Feature>
+
+            <Feature>
+              Future Premium features
+            </Feature>
+
+            {premium ? (
+              <div style={premiumActiveStyle}>
+                ✓ Premium is active
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  upgradeToPremium(
+                    "yearly"
+                  )
+                }
+                disabled={
+                  upgradingPlan !==
+                    null ||
+                  loading
+                }
+                style={
+                  upgradeButtonStyle
+                }
+              >
+                {upgradingPlan ===
+                "yearly"
+                  ? "Opening Stripe..."
+                  : "Choose Yearly"}
+              </button>
+            )}
+          </article>
+
+          <article
+            style={{
+              ...premiumCardStyle,
+              border:
+                "1px solid rgba(96,165,250,0.34)",
+              background:
+                "linear-gradient(145deg, rgba(96,165,250,0.10), rgba(168,85,247,0.07), rgba(255,255,255,0.03))",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems:
+                  "center",
+                justifyContent:
+                  "space-between",
+                gap: 10,
+              }}
+            >
+              <p
+                style={{
+                  ...premiumPlanLabelStyle,
+                  color: "#93c5fd",
+                }}
+              >
+                LIFETIME
+              </p>
+
+              <span
+                style={
+                  lifetimeBadgeStyle
+                }
+              >
+                One payment
+              </span>
+            </div>
+
+            <h2
+              style={{
+                margin:
+                  "8px 0 0",
+                fontSize: 27,
+              }}
+            >
+              Premium Lifetime
+            </h2>
+
+            <div style={priceWrapStyle}>
+              <strong style={priceStyle}>
+                $1,499.99
+              </strong>
+              <span style={pricePeriodStyle}>
+                once
+              </span>
+            </div>
+
+            <p style={mutedStyle}>
+              Pay once for permanent
+              Norvexa Premium access.
+              No recurring subscription fee.
+            </p>
+
+            <Feature>
+              Everything in Free
+            </Feature>
+
+            <Feature>
+              Premium AI research
+            </Feature>
+
+            <Feature>
+              Advanced portfolio analytics
+            </Feature>
+
+            <Feature>
+              Premium screeners and tools
+            </Feature>
+
+            <Feature>
+              Future Premium features
+            </Feature>
+
+            {premium ? (
+              <div style={premiumActiveStyle}>
+                ✓ Premium is active
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  upgradeToPremium(
+                    "lifetime"
+                  )
+                }
+                disabled={
+                  upgradingPlan !==
+                    null ||
+                  loading
+                }
+                style={{
+                  ...upgradeButtonStyle,
+                  background:
+                    "#93c5fd",
+                }}
+              >
+                {upgradingPlan ===
+                "lifetime"
+                  ? "Opening Stripe..."
+                  : "Choose Lifetime"}
               </button>
             )}
           </article>
@@ -410,7 +668,11 @@ export default function PremiumPage() {
                 />
 
                 <Detail
-                  label="Renews / ends"
+                  label={
+                    subscription.stripe_subscription_id
+                      ? "Renews / ends"
+                      : "Access"
+                  }
                   value={
                     subscription.current_period_end
                       ? new Date(
@@ -418,7 +680,10 @@ export default function PremiumPage() {
                         ).toLocaleDateString(
                           "en-US"
                         )
-                      : "Not available"
+                      : premium &&
+                          !subscription.stripe_subscription_id
+                        ? "Lifetime"
+                        : "Not available"
                   }
                 />
 
@@ -448,14 +713,22 @@ export default function PremiumPage() {
               lineHeight: 1.55,
             }}
           >
-            Premium subscriptions,
-            billing, payment methods,
-            and cancellations are managed
-            securely through Stripe.
+            Monthly and yearly
+            subscriptions, one-time Lifetime
+            purchases, billing, payment
+            methods, and cancellations are
+            handled securely through Stripe.
           </p>
         </div>
 
         <style jsx>{`
+          @media (max-width: 1100px) {
+            .plans-grid {
+              grid-template-columns:
+                repeat(2, minmax(0, 1fr)) !important;
+            }
+          }
+
           @media (max-width: 700px) {
             .plans-grid {
               grid-template-columns:
@@ -530,7 +803,7 @@ const pageStyle = {
 };
 
 const containerStyle = {
-  maxWidth: 1050,
+  maxWidth: 1240,
   margin: "0 auto",
 };
 
@@ -611,6 +884,52 @@ const planLabelStyle = {
 const premiumPlanLabelStyle = {
   ...planLabelStyle,
   color: "#fbbf24",
+};
+
+const priceWrapStyle = {
+  display: "flex",
+  alignItems: "baseline",
+  gap: 6,
+  margin: "18px 0 14px",
+  flexWrap: "wrap" as const,
+};
+
+const priceStyle = {
+  color: "white",
+  fontSize: 31,
+  lineHeight: 1,
+  fontWeight: 900,
+  letterSpacing: "-0.03em",
+};
+
+const pricePeriodStyle = {
+  color: "#9ca3af",
+  fontSize: 11,
+  fontWeight: 700,
+};
+
+const flexibleStyle = {
+  padding: "5px 8px",
+  border:
+    "1px solid rgba(255,255,255,0.12)",
+  borderRadius: 999,
+  background:
+    "rgba(255,255,255,0.04)",
+  color: "#d1d5db",
+  fontSize: 8,
+  fontWeight: 850,
+};
+
+const lifetimeBadgeStyle = {
+  padding: "5px 8px",
+  border:
+    "1px solid rgba(147,197,253,0.28)",
+  borderRadius: 999,
+  background:
+    "rgba(96,165,250,0.08)",
+  color: "#93c5fd",
+  fontSize: 8,
+  fontWeight: 850,
 };
 
 const recommendedStyle = {

@@ -11,6 +11,9 @@ export async function POST(request: Request) {
   const webhookSecret =
     process.env.STRIPE_WEBHOOK_SECRET;
 
+  const lifetimePriceId =
+    process.env.STRIPE_PREMIUM_LIFETIME_PRICE_ID;
+
   const supabaseUrl =
     process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -32,9 +35,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const stripe = new Stripe(
-    stripeSecretKey
-  );
+  const stripe =
+    new Stripe(stripeSecretKey);
 
   const signature =
     request.headers.get(
@@ -93,80 +95,20 @@ export async function POST(request: Request) {
   try {
     if (
       event.type ===
-      "checkout.session.completed"
+        "checkout.session.completed" ||
+      event.type ===
+        "checkout.session.async_payment_succeeded"
     ) {
       const session =
         event.data
           .object as Stripe.Checkout.Session;
 
-      const userId =
-        session.metadata
-          ?.Norvexa_user_id ||
-        session.metadata
-          ?.tradepilot_user_id ||
-        session.client_reference_id;
-
-      const customerId =
-        typeof session.customer ===
-        "string"
-          ? session.customer
-          : session.customer?.id;
-
-      const subscriptionId =
-        typeof session.subscription ===
-        "string"
-          ? session.subscription
-          : session.subscription?.id;
-
-      if (
-        userId &&
-        customerId
-      ) {
-        const {
-          error:
-            checkoutUpdateError,
-        } =
-          await supabaseAdmin
-            .from(
-              "premium_subscriptions"
-            )
-            .upsert(
-              {
-                user_id:
-                  userId,
-
-                stripe_customer_id:
-                  customerId,
-
-                stripe_subscription_id:
-                  subscriptionId ||
-                  null,
-              },
-              {
-                onConflict:
-                  "user_id",
-              }
-            );
-
-        if (
-          checkoutUpdateError
-        ) {
-          throw checkoutUpdateError;
-        }
-      }
-
-      if (subscriptionId) {
-        const subscription =
-          await stripe.subscriptions.retrieve(
-            subscriptionId
-          );
-
-        await syncSubscription(
-          stripe,
-          supabaseAdmin,
-          subscription
-        );
-      }
+      await handleCheckoutSession(
+        stripe,
+        supabaseAdmin,
+        session,
+        lifetimePriceId || null
+      );
     }
 
     if (
@@ -183,7 +125,8 @@ export async function POST(request: Request) {
       await syncSubscription(
         stripe,
         supabaseAdmin,
-        subscription
+        subscription,
+        lifetimePriceId || null
       );
     }
 
@@ -208,10 +151,227 @@ export async function POST(request: Request) {
   }
 }
 
+async function handleCheckoutSession(
+  stripe: Stripe,
+  supabaseAdmin: any,
+  session: Stripe.Checkout.Session,
+  lifetimePriceId: string | null
+) {
+  const userId =
+    session.metadata
+      ?.Norvexa_user_id ||
+    session.metadata
+      ?.tradepilot_user_id ||
+    session.client_reference_id;
+
+  if (!userId) {
+    throw new Error(
+      `Checkout session ${session.id} does not contain a Norvexa user ID.`
+    );
+  }
+
+  const customerId =
+    typeof session.customer ===
+    "string"
+      ? session.customer
+      : session.customer?.id;
+
+  if (!customerId) {
+    throw new Error(
+      `Checkout session ${session.id} does not contain a Stripe customer.`
+    );
+  }
+
+  /*
+    MONTHLY / YEARLY SUBSCRIPTIONS
+  */
+  if (
+    session.mode ===
+      "subscription"
+  ) {
+    const subscriptionId =
+      typeof session.subscription ===
+      "string"
+        ? session.subscription
+        : session.subscription?.id;
+
+    if (!subscriptionId) {
+      throw new Error(
+        `Subscription checkout ${session.id} did not return a subscription ID.`
+      );
+    }
+
+    const {
+      error:
+        checkoutUpdateError,
+    } =
+      await supabaseAdmin
+        .from(
+          "premium_subscriptions"
+        )
+        .upsert(
+          {
+            user_id:
+              userId,
+
+            stripe_customer_id:
+              customerId,
+
+            stripe_subscription_id:
+              subscriptionId,
+          },
+          {
+            onConflict:
+              "user_id",
+          }
+        );
+
+    if (
+      checkoutUpdateError
+    ) {
+      throw checkoutUpdateError;
+    }
+
+    const subscription =
+      await stripe.subscriptions.retrieve(
+        subscriptionId
+      );
+
+    await syncSubscription(
+      stripe,
+      supabaseAdmin,
+      subscription,
+      lifetimePriceId
+    );
+
+    return;
+  }
+
+  /*
+    LIFETIME / ONE-TIME PAYMENT
+  */
+  if (
+    session.mode ===
+      "payment"
+  ) {
+    const selectedPlan =
+      session.metadata
+        ?.Norvexa_plan;
+
+    const paymentSucceeded =
+      session.payment_status ===
+        "paid" ||
+      session.payment_status ===
+        "no_payment_required";
+
+    if (!paymentSucceeded) {
+      console.log(
+        `Checkout session ${session.id} has not been paid yet. Current status: ${session.payment_status}`
+      );
+      return;
+    }
+
+    /*
+      We only grant lifetime access when
+      the checkout explicitly says it was
+      the lifetime plan.
+    */
+    if (
+      selectedPlan !==
+        "lifetime"
+    ) {
+      console.log(
+        `Ignoring one-time checkout ${session.id} because it is not marked as Norvexa lifetime.`
+      );
+      return;
+    }
+
+    const lineItems =
+      await stripe.checkout.sessions.listLineItems(
+        session.id,
+        {
+          limit: 10,
+        }
+      );
+
+    const purchasedPriceId =
+      lineItems.data[0]
+        ?.price?.id ||
+      lifetimePriceId ||
+      null;
+
+    if (
+      lifetimePriceId &&
+      purchasedPriceId !==
+        lifetimePriceId
+    ) {
+      throw new Error(
+        `Lifetime checkout used unexpected Stripe price ${purchasedPriceId}.`
+      );
+    }
+
+    const {
+      error:
+        lifetimeUpdateError,
+    } =
+      await supabaseAdmin
+        .from(
+          "premium_subscriptions"
+        )
+        .upsert(
+          {
+            user_id:
+              userId,
+
+            plan:
+              "premium",
+
+            /*
+              Keep "active" so your existing
+              Premium gates continue working
+              without needing a new DB status.
+            */
+            status:
+              "active",
+
+            stripe_customer_id:
+              customerId,
+
+            stripe_subscription_id:
+              null,
+
+            stripe_price_id:
+              purchasedPriceId,
+
+            current_period_end:
+              null,
+
+            cancel_at_period_end:
+              false,
+          },
+          {
+            onConflict:
+              "user_id",
+          }
+        );
+
+    if (
+      lifetimeUpdateError
+    ) {
+      throw lifetimeUpdateError;
+    }
+
+    console.log(
+      `Lifetime Premium activated for Norvexa user ${userId}.`
+    );
+  }
+}
+
 async function syncSubscription(
   stripe: Stripe,
   supabaseAdmin: any,
-  subscription: Stripe.Subscription
+  subscription: Stripe.Subscription,
+  lifetimePriceId: string | null
 ) {
   const customerId =
     typeof subscription.customer ===
@@ -276,6 +436,59 @@ async function syncSubscription(
     throw new Error(
       `Unable to match Stripe customer ${customerId} to a Norvexa user.`
     );
+  }
+
+  /*
+    Safety:
+    if this Norvexa user already owns
+    Lifetime Premium, do not let a stale
+    subscription event downgrade it.
+  */
+  if (lifetimePriceId) {
+    const {
+      data: currentAccess,
+      error:
+        currentAccessError,
+    } =
+      await supabaseAdmin
+        .from(
+          "premium_subscriptions"
+        )
+        .select(
+          `
+            plan,
+            status,
+            stripe_price_id,
+            stripe_subscription_id
+          `
+        )
+        .eq(
+          "user_id",
+          userId
+        )
+        .maybeSingle();
+
+    if (
+      currentAccessError
+    ) {
+      throw currentAccessError;
+    }
+
+    const hasLifetimeAccess =
+      currentAccess?.plan ===
+        "premium" &&
+      currentAccess
+        ?.stripe_price_id ===
+        lifetimePriceId &&
+      !currentAccess
+        ?.stripe_subscription_id;
+
+    if (hasLifetimeAccess) {
+      console.log(
+        `Ignoring subscription event ${subscription.id} because user ${userId} already owns Lifetime Premium.`
+      );
+      return;
+    }
   }
 
   const status =

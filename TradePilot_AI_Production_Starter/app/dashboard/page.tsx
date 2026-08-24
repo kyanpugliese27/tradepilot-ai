@@ -2177,8 +2177,26 @@ export default function DashboardPage() {
             }
 
             .main {
-              padding-left: 14px !important;
-              padding-right: 14px !important;
+              padding-top:
+                max(
+                  84px,
+                  calc(env(safe-area-inset-top) + 70px)
+                ) !important;
+              padding-left:
+                max(
+                  14px,
+                  env(safe-area-inset-left)
+                ) !important;
+              padding-right:
+                max(
+                  14px,
+                  env(safe-area-inset-right)
+                ) !important;
+              padding-bottom:
+                max(
+                  24px,
+                  env(safe-area-inset-bottom)
+                ) !important;
             }
 
             .value {
