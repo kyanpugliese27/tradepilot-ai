@@ -37,6 +37,12 @@ type OwnershipHolder = {
   share: number;
   change: number;
   filingDate: string;
+
+  // Kept for compatibility with the existing
+  // OwnershipCenter frontend.
+  portfolioPercent: number | null;
+
+  // Business Quant fields.
   ownershipPercent: number | null;
   positionValue: number | null;
   changePercent: number | null;
@@ -111,10 +117,15 @@ export async function GET(
     const from = formatDate(
       addDays(new Date(), -365)
     );
+
     const to = formatDate(
       new Date()
     );
 
+    /*
+     * FINNHUB
+     * Insider transactions
+     */
     const insiderUrl =
       new URL(
         "https://finnhub.io/api/v1/stock/insider-transactions"
@@ -124,19 +135,26 @@ export async function GET(
       "symbol",
       symbol
     );
+
     insiderUrl.searchParams.set(
       "from",
       from
     );
+
     insiderUrl.searchParams.set(
       "to",
       to
     );
+
     insiderUrl.searchParams.set(
       "token",
       finnhubApiKey
     );
 
+    /*
+     * BUSINESS QUANT
+     * SEC 13F top institutional holders
+     */
     const topHoldersUrl =
       new URL(
         "https://data.businessquant.com/13f"
@@ -146,15 +164,21 @@ export async function GET(
       "mode",
       "topholders"
     );
+
     topHoldersUrl.searchParams.set(
       "ticker_issuer",
       symbol
     );
+
     topHoldersUrl.searchParams.set(
       "api_key",
       businessQuantApiKey
     );
 
+    /*
+     * BUSINESS QUANT
+     * Aggregate institutional statistics
+     */
     const statsUrl =
       new URL(
         "https://data.businessquant.com/13f"
@@ -164,10 +188,12 @@ export async function GET(
       "mode",
       "stats"
     );
+
     statsUrl.searchParams.set(
       "ticker_issuer",
       symbol
     );
+
     statsUrl.searchParams.set(
       "api_key",
       businessQuantApiKey
@@ -183,6 +209,9 @@ export async function GET(
       fetchOptionalJson(statsUrl),
     ]);
 
+    /*
+     * INSIDER DATA
+     */
     const insiders =
       Array.isArray(
         insiderResult.data?.data
@@ -210,6 +239,9 @@ export async function GET(
             .slice(0, 50)
         : [];
 
+    /*
+     * BUSINESS QUANT 13F HOLDERS
+     */
     const allHolders =
       Array.isArray(
         topHoldersResult.data?.data
@@ -238,14 +270,16 @@ export async function GET(
         : [];
 
     /*
-      Business Quant's 13F endpoint returns
-      institutional filing managers. SEC 13F
-      does not provide a perfect "fund vs
-      institution" taxonomy, so we conservatively
-      classify obvious fund/asset-manager names
-      into the Funds tab and leave the rest in
-      Institutions.
-    */
+     * Business Quant's 13F endpoint
+     * returns institutional filing managers.
+     *
+     * SEC 13F does not provide a perfect
+     * fund/institution classification.
+     *
+     * For the existing Norvexa tabs,
+     * obvious fund / asset manager names
+     * are placed under Funds.
+     */
     const funds =
       allHolders
         .filter((holder) =>
@@ -265,6 +299,9 @@ export async function GET(
         )
         .slice(0, 20);
 
+    /*
+     * INSIDER SUMMARY
+     */
     const buys =
       insiders.filter(
         (item) => item.change > 0
@@ -299,6 +336,9 @@ export async function GET(
       buyShares -
       sellShares;
 
+    /*
+     * INSTITUTIONAL SUMMARY
+     */
     const netInstitutionalChange =
       institutions.reduce(
         (sum, item) =>
@@ -313,6 +353,9 @@ export async function GET(
         0
       );
 
+    /*
+     * BUSINESS QUANT STATS
+     */
     const statsRecord =
       Array.isArray(
         statsResult.data?.data
@@ -323,79 +366,108 @@ export async function GET(
     return NextResponse.json(
       {
         symbol,
+
         insiders,
+
         institutions,
+
         funds,
+
         summary: {
           insiderTransactions:
             insiders.length,
+
           buyTransactions:
             buys.length,
+
           sellTransactions:
             sells.length,
+
           buyShares,
+
           sellShares,
+
           netShares,
+
           institutionalHolders:
             finiteNumber(
               statsRecord
                 ?.institutions_total_count
             ) ||
             allHolders.length,
+
           fundHolders:
             funds.length,
+
           netInstitutionalChange,
+
           netFundChange,
+
           institutionalOwnershipPercent:
             finiteOrNull(
               statsRecord
                 ?.institutions_shares_pct_outstanding
             ),
+
           institutionalValue:
             finiteOrNull(
               statsRecord
                 ?.institutions_held_value
             ),
+
           institutionsBought:
             finiteNumber(
               statsRecord
                 ?.institutions_bought_count
             ),
+
           institutionsSold:
             finiteNumber(
               statsRecord
                 ?.institutions_sold_count
             ),
+
           institutionsHeld:
             finiteNumber(
               statsRecord
                 ?.institutions_held_count
             ),
         },
+
         availability: {
           insiders:
             insiderResult.ok &&
             insiders.length > 0,
+
           institutions:
             topHoldersResult.ok &&
             institutions.length > 0,
+
           funds:
             topHoldersResult.ok &&
             funds.length > 0,
+
           insiderStatus:
             insiderResult.status,
+
           ownershipStatus:
             topHoldersResult.status,
+
           fundOwnershipStatus:
             topHoldersResult.status,
         },
+
         source: {
-          insiders: "Finnhub",
+          insiders:
+            "Finnhub",
+
           institutions:
             "Business Quant / SEC 13F",
+
           funds:
             "Business Quant / SEC 13F",
         },
+
         generatedAt:
           new Date().toISOString(),
       },
@@ -424,6 +496,10 @@ export async function GET(
   }
 }
 
+/*
+ * Fetch JSON without allowing one upstream
+ * API failure to crash the entire endpoint.
+ */
 async function fetchOptionalJson(
   url: URL
 ): Promise<{
@@ -443,9 +519,13 @@ async function fetchOptionalJson(
     const response =
       await fetch(url, {
         cache: "no-store",
-        signal: controller.signal,
+
+        signal:
+          controller.signal,
+
         headers: {
-          Accept: "application/json",
+          Accept:
+            "application/json",
         },
       });
 
@@ -469,22 +549,26 @@ async function fetchOptionalJson(
         {
           host:
             url.hostname,
+
           status:
             response.status,
+
           data,
         }
       );
 
       return {
         ok: false,
-        status: response.status,
+        status:
+          response.status,
         data,
       };
     }
 
     return {
       ok: true,
-      status: response.status,
+      status:
+        response.status,
       data,
     };
   } catch (error) {
@@ -493,6 +577,7 @@ async function fetchOptionalJson(
       {
         host:
           url.hostname,
+
         error,
       }
     );
@@ -507,6 +592,9 @@ async function fetchOptionalJson(
   }
 }
 
+/*
+ * Normalize Finnhub insider transaction.
+ */
 function normalizeInsider(
   item: InsiderTransaction
 ) {
@@ -524,20 +612,32 @@ function normalizeInsider(
         )
       : "";
 
-  if (!name || !transactionDate) {
+  if (
+    !name ||
+    !transactionDate
+  ) {
     return null;
   }
 
   return {
     name,
+
     symbol:
-      typeof item.symbol === "string"
+      typeof item.symbol ===
+      "string"
         ? item.symbol
         : "",
+
     share:
-      finiteNumber(item.share),
+      finiteNumber(
+        item.share
+      ),
+
     change:
-      finiteNumber(item.change),
+      finiteNumber(
+        item.change
+      ),
+
     filingDate:
       typeof item.filingDate ===
       "string"
@@ -546,12 +646,15 @@ function normalizeInsider(
             10
           )
         : "",
+
     transactionDate,
+
     transactionCode:
       typeof item.transactionCode ===
       "string"
         ? item.transactionCode
         : "",
+
     transactionPrice:
       finiteOrNull(
         item.transactionPrice
@@ -559,6 +662,13 @@ function normalizeInsider(
   };
 }
 
+/*
+ * Normalize Business Quant 13F holder.
+ *
+ * portfolioPercent is included specifically
+ * so the existing OwnershipCenter.tsx can
+ * continue reading that property safely.
+ */
 function normalizeBusinessQuantHolder(
   item: BusinessQuantHolder
 ): OwnershipHolder | null {
@@ -573,16 +683,24 @@ function normalizeBusinessQuantHolder(
     return null;
   }
 
+  const ownershipPercent =
+    finiteOrNull(
+      item.institution_pct
+    );
+
   return {
     name,
+
     share:
       finiteNumber(
         item.shprn_amount
       ),
+
     change:
       finiteNumber(
         item.shares_change_qoq
       ),
+
     filingDate:
       getDateOnly(
         item.filingdate ||
@@ -590,18 +708,30 @@ function normalizeBusinessQuantHolder(
           item.quarter ||
           ""
       ),
-    ownershipPercent:
-      finiteOrNull(
-        item.institution_pct
-      ),
+
+    /*
+     * Compatibility field for the existing
+     * frontend.
+     *
+     * Using the available Business Quant
+     * institution percentage prevents
+     * undefined.toFixed() crashes.
+     */
+    portfolioPercent:
+      ownershipPercent,
+
+    ownershipPercent,
+
     positionValue:
       finiteOrNull(
         item.value
       ),
+
     changePercent:
       finiteOrNull(
         item.shares_change_qoq_pct
       ),
+
     rank:
       finiteOrNull(
         item.shareholder_rank
@@ -609,6 +739,10 @@ function normalizeBusinessQuantHolder(
   };
 }
 
+/*
+ * Basic classification for the existing
+ * Institutions and Funds tabs.
+ */
 function looksLikeFundManager(
   name: string
 ) {
@@ -711,7 +845,11 @@ function noStoreHeaders() {
   return {
     "Cache-Control":
       "private, no-cache, no-store, max-age=0, must-revalidate",
-    Pragma: "no-cache",
-    Expires: "0",
+
+    Pragma:
+      "no-cache",
+
+    Expires:
+      "0",
   };
 }
