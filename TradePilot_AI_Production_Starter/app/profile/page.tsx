@@ -39,6 +39,7 @@ type ProfileRow = {
   show_holdings: boolean;
   show_recent_trades: boolean;
   show_win_rate: boolean;
+  referral_code: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -93,6 +94,20 @@ export default function ProfilePage() {
 
   const [earnedBadges, setEarnedBadges] =
     useState<EarnedBadge[]>([]);
+
+  const [referralCode, setReferralCode] =
+    useState("");
+
+  const [referralCount, setReferralCount] =
+    useState(0);
+
+  const [
+    qualifiedReferralCount,
+    setQualifiedReferralCount,
+  ] = useState(0);
+
+  const [copyStatus, setCopyStatus] =
+    useState("");
 
   const [email, setEmail] =
     useState("");
@@ -178,6 +193,7 @@ export default function ProfilePage() {
           profileResult,
           portfolioResponse,
           badgesResult,
+          referralsResult,
         ] = await Promise.all([
           supabase
             .from("profiles")
@@ -195,6 +211,7 @@ export default function ProfilePage() {
                 show_holdings,
                 show_recent_trades,
                 show_win_rate,
+                referral_code,
                 created_at,
                 updated_at
               `
@@ -225,6 +242,13 @@ export default function ProfilePage() {
             .order("earned_at", {
               ascending: false,
             }),
+          supabase
+            .from("referrals")
+            .select("status")
+            .eq(
+              "referrer_user_id",
+              user.id
+            ),
         ]);
 
         if (profileResult.error) {
@@ -244,10 +268,36 @@ export default function ProfilePage() {
           );
         }
 
+        if (referralsResult.error) {
+          console.error(
+            "Unable to load referrals:",
+            referralsResult.error
+          );
+        } else {
+          const referralRows =
+            referralsResult.data || [];
+
+          setReferralCount(
+            referralRows.length
+          );
+
+          setQualifiedReferralCount(
+            referralRows.filter(
+              (item) =>
+                item.status ===
+                "qualified"
+            ).length
+          );
+        }
+
         const loadedProfile =
           profileResult.data as ProfileRow;
 
         setProfile(loadedProfile);
+        setReferralCode(
+          loadedProfile.referral_code ||
+            ""
+        );
         setUsername(
           loadedProfile.username || ""
         );
@@ -504,6 +554,7 @@ export default function ProfilePage() {
             show_holdings,
             show_recent_trades,
             show_win_rate,
+            referral_code,
             created_at,
             updated_at
           `
@@ -518,6 +569,11 @@ export default function ProfilePage() {
 
       setProfile(
         updatedProfile as ProfileRow
+      );
+
+      setReferralCode(
+        updatedProfile.referral_code ||
+          referralCode
       );
 
       setUsername(
@@ -699,6 +755,39 @@ export default function ProfilePage() {
       );
     } finally {
       setUploading(false);
+    }
+  }
+
+  const referralLink =
+    referralCode &&
+    typeof window !== "undefined"
+      ? `${window.location.origin}/signup?ref=${encodeURIComponent(
+          referralCode
+        )}`
+      : "";
+
+  async function copyReferralLink() {
+    if (!referralLink) {
+      setCopyStatus(
+        "Referral link is not available yet."
+      );
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(
+        referralLink
+      );
+
+      setCopyStatus("Copied!");
+
+      window.setTimeout(() => {
+        setCopyStatus("");
+      }, 2000);
+    } catch {
+      setCopyStatus(
+        "Unable to copy automatically."
+      );
     }
   }
 
@@ -1356,6 +1445,149 @@ export default function ProfilePage() {
           </section>
         </div>
 
+        <section style={referralCardStyle}>
+          <div style={referralHeaderStyle}>
+            <div>
+              <p style={eyebrowStyle}>
+                Refer & earn
+              </p>
+
+              <h2 style={{ margin: 0 }}>
+                Invite Friends to Norvexa
+              </h2>
+
+              <p
+                style={{
+                  margin: "7px 0 0",
+                  ...mutedStyle,
+                  fontSize: 10,
+                  lineHeight: 1.55,
+                  maxWidth: 620,
+                }}
+              >
+                Share your personal referral
+                link. Referral activity will
+                appear here as friends join
+                Norvexa through your link.
+              </p>
+            </div>
+
+            <span style={referralCodeBadgeStyle}>
+              {referralCode
+                ? `Code: ${referralCode}`
+                : "Referral code loading"}
+            </span>
+          </div>
+
+          <div
+            className="referral-stats-grid"
+            style={referralStatsGridStyle}
+          >
+            <PreviewStat
+              label="Total referrals"
+              value={String(
+                referralCount
+              )}
+            />
+
+            <PreviewStat
+              label="Qualified"
+              value={String(
+                qualifiedReferralCount
+              )}
+              color="#4ade80"
+            />
+          </div>
+
+          <div style={referralLinkBoxStyle}>
+            <span
+              style={{
+                ...mutedStyle,
+                fontSize: 9,
+              }}
+            >
+              Your referral link
+            </span>
+
+            <div
+              className="referral-link-row"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginTop: 8,
+              }}
+            >
+              <input
+                readOnly
+                value={
+                  referralLink ||
+                  "Referral link unavailable"
+                }
+                aria-label="Your Norvexa referral link"
+                style={{
+                  ...inputStyle,
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={
+                  copyReferralLink
+                }
+                disabled={!referralLink}
+                style={{
+                  ...primaryButtonStyle,
+                  flexShrink: 0,
+                  opacity:
+                    referralLink
+                      ? 1
+                      : 0.55,
+                  cursor:
+                    referralLink
+                      ? "pointer"
+                      : "not-allowed",
+                }}
+              >
+                {copyStatus === "Copied!"
+                  ? "Copied ✓"
+                  : "Copy Link"}
+              </button>
+            </div>
+
+            {copyStatus &&
+              copyStatus !==
+                "Copied!" && (
+                <p
+                  style={{
+                    margin:
+                      "8px 0 0",
+                    color:
+                      "#fbbf24",
+                    fontSize: 9,
+                  }}
+                >
+                  {copyStatus}
+                </p>
+              )}
+          </div>
+
+          <p
+            style={{
+              margin: "12px 0 0",
+              ...mutedStyle,
+              fontSize: 9,
+              lineHeight: 1.55,
+            }}
+          >
+            Referral rewards can be added
+            later without changing your
+            personal referral link.
+          </p>
+        </section>
+
         <section style={achievementsCardStyle}>
           <div style={achievementsHeaderStyle}>
             <div>
@@ -1525,9 +1757,21 @@ export default function ProfilePage() {
                 1fr !important;
             }
 
-            .achievement-grid {
+            .achievement-grid,
+            .referral-stats-grid {
               grid-template-columns:
                 1fr !important;
+            }
+
+            .referral-link-row {
+              align-items:
+                stretch !important;
+              flex-direction:
+                column !important;
+            }
+
+            .referral-link-row button {
+              width: 100%;
             }
           }
         `}</style>
@@ -1989,6 +2233,54 @@ const successStyle = {
   background:
     "rgba(34,197,94,0.08)",
   color: "#4ade80",
+};
+
+const referralCardStyle = {
+  marginTop: 16,
+  padding: 20,
+  border:
+    "1px solid rgba(96,165,250,0.18)",
+  borderRadius: 15,
+  background:
+    "linear-gradient(145deg, rgba(37,99,235,0.07), rgba(168,85,247,0.035), rgba(255,255,255,0.025))",
+};
+
+const referralHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: 12,
+  flexWrap: "wrap" as const,
+};
+
+const referralCodeBadgeStyle = {
+  padding: "6px 9px",
+  border:
+    "1px solid rgba(96,165,250,0.2)",
+  borderRadius: 999,
+  background:
+    "rgba(37,99,235,0.07)",
+  color: "#93c5fd",
+  fontSize: 9,
+  fontWeight: 850,
+};
+
+const referralStatsGridStyle = {
+  display: "grid",
+  gridTemplateColumns:
+    "repeat(2, minmax(0, 1fr))",
+  gap: 10,
+  marginTop: 16,
+};
+
+const referralLinkBoxStyle = {
+  marginTop: 14,
+  padding: 14,
+  border:
+    "1px solid rgba(255,255,255,0.07)",
+  borderRadius: 11,
+  background:
+    "rgba(255,255,255,0.025)",
 };
 
 const achievementsCardStyle = {

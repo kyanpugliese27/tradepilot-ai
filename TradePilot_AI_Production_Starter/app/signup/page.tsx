@@ -42,6 +42,18 @@ function getSafeNextPath(
   return value;
 }
 
+function normalizeReferralCode(
+  value: string | null
+) {
+  return (
+    value
+      ?.trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, "") ||
+    ""
+  );
+}
+
 export default function SignupPage() {
   return (
     <Suspense fallback={<SignupFallback />}>
@@ -93,11 +105,9 @@ function SignupPageContent() {
 
   useEffect(() => {
     const code =
-      searchParams
-        .get("ref")
-        ?.trim()
-        .toUpperCase() ||
-      "";
+      normalizeReferralCode(
+        searchParams.get("ref")
+      );
 
     if (code) {
       setReferralCode(code);
@@ -108,15 +118,15 @@ function SignupPageContent() {
       );
     } else {
       const savedCode =
-        localStorage.getItem(
-          "Norvexa_referral"
+        normalizeReferralCode(
+          localStorage.getItem(
+            "Norvexa_referral"
+          )
         );
 
       if (savedCode) {
         setReferralCode(
           savedCode
-            .trim()
-            .toUpperCase()
         );
       }
     }
@@ -184,11 +194,12 @@ function SignupPageContent() {
         );
 
       const savedReferral =
-        referralCode ||
-        localStorage.getItem(
-          "Norvexa_referral"
-        ) ||
-        "";
+        normalizeReferralCode(
+          referralCode ||
+            localStorage.getItem(
+              "Norvexa_referral"
+            )
+        );
 
       const {
         data,
@@ -206,9 +217,7 @@ function SignupPageContent() {
             options: {
               data: {
                 referral_code:
-                  savedReferral
-                    .trim()
-                    .toUpperCase() ||
+                  savedReferral ||
                   null,
               },
             },
