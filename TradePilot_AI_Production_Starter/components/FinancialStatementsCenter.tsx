@@ -71,6 +71,7 @@ type FinancialResponse = {
     premiumBlocked: boolean;
     anyAvailable: boolean;
   };
+  source?: string;
   generatedAt: string;
   error?: string;
 };
@@ -115,6 +116,26 @@ export default function FinancialStatementsCenter({
           cache: "no-store",
         }
       );
+
+      const contentType =
+        response.headers.get(
+          "content-type"
+        ) || "";
+
+      if (
+        !contentType.includes(
+          "application/json"
+        )
+      ) {
+        const fallbackText =
+          await response.text();
+
+        throw new Error(
+          fallbackText
+            ? "Financial statements returned an unexpected response."
+            : "Unable to load financial statements."
+        );
+      }
 
       const result =
         (await response.json()) as FinancialResponse;
@@ -586,6 +607,19 @@ export default function FinancialStatementsCenter({
         </>
       )}
 
+      {data.source && (
+        <p
+          className="muted"
+          style={{
+            margin: "12px 0 0",
+            fontSize: 10,
+            lineHeight: 1.5,
+          }}
+        >
+          Source: {data.source}
+        </p>
+      )}
+
       <style jsx>{`
         @media (max-width: 850px) {
           .financial-trend-grid {
@@ -839,7 +873,7 @@ function UnavailablePanel({
         }}
       >
         {premium
-          ? "Finnhub’s standardized financial statements require premium fundamental-data access. The rest of Norvexa will continue working normally."
+          ? "Financial-statement data is temporarily unavailable from the connected data provider. The rest of Norvexa will continue working normally."
           : "No standardized financial statements were returned for this company or selected frequency."}
       </p>
     </div>
