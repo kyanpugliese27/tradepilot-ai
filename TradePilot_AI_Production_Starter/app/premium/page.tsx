@@ -446,7 +446,7 @@ export default function PremiumPage() {
 
             <div style={priceWrapStyle}>
               <strong style={priceStyle}>
-                $699.99
+                $500
               </strong>
               <span style={pricePeriodStyle}>
                 / year
@@ -459,8 +459,8 @@ export default function PremiumPage() {
                 marginBottom: 8,
               }}
             >
-              About $58.33/month.
-              Save $259.89 per year
+              About $41.67/month.
+              Save $459.88 per year
               versus monthly billing.
             </p>
 
@@ -562,7 +562,7 @@ export default function PremiumPage() {
 
             <div style={priceWrapStyle}>
               <strong style={priceStyle}>
-                $1,499.99
+                $800
               </strong>
               <span style={pricePeriodStyle}>
                 once
