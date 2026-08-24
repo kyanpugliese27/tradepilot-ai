@@ -354,9 +354,6 @@ video {
     1px solid var(--line);
 }
 
-/* Any intentionally wide table can scroll
-   instead of forcing the entire page wider. */
-
 .table-scroll,
 .horizontal-scroll {
   width: 100%;
@@ -570,7 +567,7 @@ video {
     padding: 50px 0;
   }
 
-  /* Dashboard shell */
+  /* Dashboard */
 
   .dashboard-layout {
     display: block;
@@ -585,22 +582,24 @@ video {
   }
 
   /*
-    The actual sidebar drawer behavior
-    will be handled in Sidebar.tsx.
-    These rules prevent the dashboard
-    itself from reserving desktop width.
+    IMPORTANT:
+    Mobile content starts lower so the
+    floating hamburger has its own space
+    and does not cover page headings.
   */
 
   .main {
     width: 100%;
     max-width: 100%;
-
     min-width: 0;
 
     padding:
       max(
-        18px,
-        env(safe-area-inset-top)
+        76px,
+        calc(
+          env(safe-area-inset-top)
+          + 66px
+        )
       )
       max(
         16px,

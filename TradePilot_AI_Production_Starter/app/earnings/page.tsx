@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
+import ResponsiveSidebar from "@/components/ResponsiveSidebar";
 
 type EarningsEvent = {
   symbol: string;
@@ -324,7 +324,7 @@ export default function EarningsPage() {
 
   return (
     <div className="dashboard-layout">
-      <Sidebar />
+      <ResponsiveSidebar />
 
       <main className="main">
         <section

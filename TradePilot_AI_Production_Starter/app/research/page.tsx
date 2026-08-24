@@ -1,12 +1,12 @@
 "use client";
 
-import Sidebar from "@/components/Sidebar";
+import ResponsiveSidebar from "@/components/ResponsiveSidebar";
 import ResearchChat from "@/components/ResearchChat";
 
 export default function ResearchPage() {
   return (
     <div className="dashboard-layout">
-      <Sidebar />
+      <ResponsiveSidebar />
 
       <main
         className="main"

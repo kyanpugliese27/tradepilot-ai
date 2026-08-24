@@ -1,12 +1,12 @@
 "use client";
 
-import Sidebar from "@/components/Sidebar";
+import ResponsiveSidebar from "@/components/ResponsiveSidebar";
 import PortfolioAnalyticsDashboard from "@/components/PortfolioAnalyticsDashboard";
 
 export default function AnalyticsPage() {
   return (
     <div className="dashboard-layout">
-      <Sidebar />
+      <ResponsiveSidebar />
 
       <main className="main">
         <section

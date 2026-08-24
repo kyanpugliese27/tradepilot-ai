@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
+import ResponsiveSidebar from "@/components/ResponsiveSidebar";
 
 type MarketItem = {
   symbol: string;
@@ -171,7 +171,7 @@ export default function MarketsPage() {
 
   return (
     <div className="dashboard-layout">
-      <Sidebar />
+      <ResponsiveSidebar />
 
       <main className="main">
         <section

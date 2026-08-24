@@ -11,7 +11,7 @@ import {
   useRouter,
   useSearchParams,
 } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
+import ResponsiveSidebar from "@/components/ResponsiveSidebar";
 
 type StockQuote = {
   symbol: string;
@@ -393,7 +393,7 @@ function ComparePageContent() {
 
   return (
     <div className="dashboard-layout">
-      <Sidebar />
+      <ResponsiveSidebar />
 
       <main className="main">
         <section

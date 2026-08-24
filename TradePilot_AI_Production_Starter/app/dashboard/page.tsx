@@ -4,7 +4,7 @@ import Link from "next/link";
 import StockSearch from "@/components/StockSearch";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
+import ResponsiveSidebar from "@/components/ResponsiveSidebar";
 import AIChat from "@/components/AIChat";
 import PortfolioPerformanceChart from "@/components/PortfolioPerformanceChart";
 import PortfolioAISummary from "@/components/PortfolioAISummary";
@@ -755,7 +755,7 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-layout">
-      <Sidebar />
+      <ResponsiveSidebar />
 
       <main className="main">
         <div className="row">

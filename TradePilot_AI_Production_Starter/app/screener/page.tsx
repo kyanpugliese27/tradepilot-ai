@@ -5,7 +5,7 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
+import ResponsiveSidebar from "@/components/ResponsiveSidebar";
 
 type Candidate = {
   symbol: string;
@@ -136,7 +136,7 @@ export default function ScreenerPage() {
 
   return (
     <div className="dashboard-layout">
-      <Sidebar />
+      <ResponsiveSidebar />
 
       <main className="main">
         <section
