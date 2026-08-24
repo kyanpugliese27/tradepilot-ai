@@ -1,4 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 
 type InsiderTransaction = {
   symbol?: string;
@@ -11,12 +14,33 @@ type InsiderTransaction = {
   transactionPrice?: number;
 };
 
-type OwnershipItem = {
-  name?: string;
-  share?: number;
-  change?: number;
-  filingDate?: string;
-  portfolioPercent?: number;
+type BusinessQuantHolder = {
+  cik_filer?: number | string;
+  name_filer?: string;
+  name_filer_short?: string;
+  reportperiod?: string;
+  quarter?: string;
+  filingdate?: string;
+  shprn_amount?: number;
+  shares_last_qtr?: number;
+  shares_change_qoq?: number;
+  shares_change_qoq_pct?: number;
+  shares_change_yoy?: number;
+  value?: number;
+  institution_pct?: number;
+  shareholder_rank?: number;
+  tag?: string;
+};
+
+type OwnershipHolder = {
+  name: string;
+  share: number;
+  change: number;
+  filingDate: string;
+  ownershipPercent: number | null;
+  positionValue: number | null;
+  changePercent: number | null;
+  rank: number | null;
 };
 
 export const dynamic = "force-dynamic";
@@ -24,15 +48,21 @@ export const revalidate = 0;
 
 const REQUEST_TIMEOUT_MS = 8_000;
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest
+) {
   try {
-    const apiKey = process.env.FINNHUB_API_KEY;
+    const finnhubApiKey =
+      process.env.FINNHUB_API_KEY;
 
-    if (!apiKey) {
+    const businessQuantApiKey =
+      process.env.BUSINESSQUANT_API_KEY;
+
+    if (!finnhubApiKey) {
       return NextResponse.json(
         {
           error:
-            "FINNHUB_API_KEY is missing from .env.local.",
+            "FINNHUB_API_KEY is missing.",
         },
         {
           status: 500,
@@ -41,14 +71,30 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const symbol = request.nextUrl.searchParams
-      .get("symbol")
-      ?.trim()
-      .toUpperCase();
+    if (!businessQuantApiKey) {
+      return NextResponse.json(
+        {
+          error:
+            "BUSINESSQUANT_API_KEY is missing.",
+        },
+        {
+          status: 500,
+          headers: noStoreHeaders(),
+        }
+      );
+    }
+
+    const symbol =
+      request.nextUrl.searchParams
+        .get("symbol")
+        ?.trim()
+        .toUpperCase();
 
     if (
       !symbol ||
-      !/^[A-Z0-9.-]{1,15}$/.test(symbol)
+      !/^[A-Z0-9.-]{1,15}$/.test(
+        symbol
+      )
     ) {
       return NextResponse.json(
         {
@@ -65,12 +111,14 @@ export async function GET(request: NextRequest) {
     const from = formatDate(
       addDays(new Date(), -365)
     );
-
-    const to = formatDate(new Date());
-
-    const insiderUrl = new URL(
-      "https://finnhub.io/api/v1/stock/insider-transactions"
+    const to = formatDate(
+      new Date()
     );
+
+    const insiderUrl =
+      new URL(
+        "https://finnhub.io/api/v1/stock/insider-transactions"
+      );
 
     insiderUrl.searchParams.set(
       "symbol",
@@ -86,145 +134,170 @@ export async function GET(request: NextRequest) {
     );
     insiderUrl.searchParams.set(
       "token",
-      apiKey
+      finnhubApiKey
     );
 
-    const ownershipUrl = new URL(
-      "https://finnhub.io/api/v1/stock/ownership"
-    );
+    const topHoldersUrl =
+      new URL(
+        "https://data.businessquant.com/13f"
+      );
 
-    ownershipUrl.searchParams.set(
-      "symbol",
+    topHoldersUrl.searchParams.set(
+      "mode",
+      "topholders"
+    );
+    topHoldersUrl.searchParams.set(
+      "ticker_issuer",
       symbol
     );
-    ownershipUrl.searchParams.set(
-      "limit",
-      "20"
-    );
-    ownershipUrl.searchParams.set(
-      "token",
-      apiKey
+    topHoldersUrl.searchParams.set(
+      "api_key",
+      businessQuantApiKey
     );
 
-    const fundOwnershipUrl = new URL(
-      "https://finnhub.io/api/v1/stock/fund-ownership"
-    );
+    const statsUrl =
+      new URL(
+        "https://data.businessquant.com/13f"
+      );
 
-    fundOwnershipUrl.searchParams.set(
-      "symbol",
+    statsUrl.searchParams.set(
+      "mode",
+      "stats"
+    );
+    statsUrl.searchParams.set(
+      "ticker_issuer",
       symbol
     );
-    fundOwnershipUrl.searchParams.set(
-      "limit",
-      "20"
-    );
-    fundOwnershipUrl.searchParams.set(
-      "token",
-      apiKey
+    statsUrl.searchParams.set(
+      "api_key",
+      businessQuantApiKey
     );
 
     const [
       insiderResult,
-      ownershipResult,
-      fundOwnershipResult,
+      topHoldersResult,
+      statsResult,
     ] = await Promise.all([
       fetchOptionalJson(insiderUrl),
-      fetchOptionalJson(ownershipUrl),
-      fetchOptionalJson(
-        fundOwnershipUrl
-      ),
+      fetchOptionalJson(topHoldersUrl),
+      fetchOptionalJson(statsUrl),
     ]);
 
-    const insiders = Array.isArray(
-      insiderResult.data?.data
-    )
-      ? (
-          insiderResult.data
-            .data as InsiderTransaction[]
-        )
-          .map(normalizeInsider)
-          .filter(
-            (
-              item
-            ): item is NonNullable<
-              ReturnType<
-                typeof normalizeInsider
-              >
-            > => item !== null
-          )
-          .sort(
-            (a, b) =>
-              b.transactionDate.localeCompare(
-                a.transactionDate
-              )
-          )
-          .slice(0, 50)
-      : [];
-
-    const institutions =
+    const insiders =
       Array.isArray(
-        ownershipResult.data?.ownership
+        insiderResult.data?.data
       )
         ? (
-            ownershipResult.data
-              .ownership as OwnershipItem[]
+            insiderResult.data
+              .data as InsiderTransaction[]
           )
-            .map(normalizeOwnership)
+            .map(normalizeInsider)
             .filter(
               (
                 item
               ): item is NonNullable<
                 ReturnType<
-                  typeof normalizeOwnership
+                  typeof normalizeInsider
                 >
               > => item !== null
             )
-            .slice(0, 20)
+            .sort(
+              (a, b) =>
+                b.transactionDate.localeCompare(
+                  a.transactionDate
+                )
+            )
+            .slice(0, 50)
         : [];
 
-    const funds = Array.isArray(
-      fundOwnershipResult.data
-        ?.ownership
-    )
-      ? (
-          fundOwnershipResult.data
-            .ownership as OwnershipItem[]
-        )
-          .map(normalizeOwnership)
-          .filter(
-            (
-              item
-            ): item is NonNullable<
-              ReturnType<
-                typeof normalizeOwnership
-              >
-            > => item !== null
+    const allHolders =
+      Array.isArray(
+        topHoldersResult.data?.data
+      )
+        ? (
+            topHoldersResult.data
+              .data as BusinessQuantHolder[]
           )
-          .slice(0, 20)
-      : [];
+            .map(
+              normalizeBusinessQuantHolder
+            )
+            .filter(
+              (
+                item
+              ): item is NonNullable<
+                ReturnType<
+                  typeof normalizeBusinessQuantHolder
+                >
+              > => item !== null
+            )
+            .sort(
+              (a, b) =>
+                (a.rank ?? 9999) -
+                (b.rank ?? 9999)
+            )
+        : [];
 
-    const buys = insiders.filter(
-      (item) => item.change > 0
-    );
+    /*
+      Business Quant's 13F endpoint returns
+      institutional filing managers. SEC 13F
+      does not provide a perfect "fund vs
+      institution" taxonomy, so we conservatively
+      classify obvious fund/asset-manager names
+      into the Funds tab and leave the rest in
+      Institutions.
+    */
+    const funds =
+      allHolders
+        .filter((holder) =>
+          looksLikeFundManager(
+            holder.name
+          )
+        )
+        .slice(0, 20);
 
-    const sells = insiders.filter(
-      (item) => item.change < 0
-    );
+    const institutions =
+      allHolders
+        .filter(
+          (holder) =>
+            !looksLikeFundManager(
+              holder.name
+            )
+        )
+        .slice(0, 20);
 
-    const buyShares = buys.reduce(
-      (sum, item) =>
-        sum + Math.abs(item.change),
-      0
-    );
+    const buys =
+      insiders.filter(
+        (item) => item.change > 0
+      );
 
-    const sellShares = sells.reduce(
-      (sum, item) =>
-        sum + Math.abs(item.change),
-      0
-    );
+    const sells =
+      insiders.filter(
+        (item) => item.change < 0
+      );
+
+    const buyShares =
+      buys.reduce(
+        (sum, item) =>
+          sum +
+          Math.abs(
+            item.change
+          ),
+        0
+      );
+
+    const sellShares =
+      sells.reduce(
+        (sum, item) =>
+          sum +
+          Math.abs(
+            item.change
+          ),
+        0
+      );
 
     const netShares =
-      buyShares - sellShares;
+      buyShares -
+      sellShares;
 
     const netInstitutionalChange =
       institutions.reduce(
@@ -239,6 +312,13 @@ export async function GET(request: NextRequest) {
           sum + item.change,
         0
       );
+
+    const statsRecord =
+      Array.isArray(
+        statsResult.data?.data
+      )
+        ? statsResult.data?.data?.[0]
+        : null;
 
     return NextResponse.json(
       {
@@ -257,27 +337,64 @@ export async function GET(request: NextRequest) {
           sellShares,
           netShares,
           institutionalHolders:
-            institutions.length,
-          fundHolders: funds.length,
+            finiteNumber(
+              statsRecord
+                ?.institutions_total_count
+            ) ||
+            allHolders.length,
+          fundHolders:
+            funds.length,
           netInstitutionalChange,
           netFundChange,
+          institutionalOwnershipPercent:
+            finiteOrNull(
+              statsRecord
+                ?.institutions_shares_pct_outstanding
+            ),
+          institutionalValue:
+            finiteOrNull(
+              statsRecord
+                ?.institutions_held_value
+            ),
+          institutionsBought:
+            finiteNumber(
+              statsRecord
+                ?.institutions_bought_count
+            ),
+          institutionsSold:
+            finiteNumber(
+              statsRecord
+                ?.institutions_sold_count
+            ),
+          institutionsHeld:
+            finiteNumber(
+              statsRecord
+                ?.institutions_held_count
+            ),
         },
         availability: {
           insiders:
             insiderResult.ok &&
             insiders.length > 0,
           institutions:
-            ownershipResult.ok &&
+            topHoldersResult.ok &&
             institutions.length > 0,
           funds:
-            fundOwnershipResult.ok &&
+            topHoldersResult.ok &&
             funds.length > 0,
           insiderStatus:
             insiderResult.status,
           ownershipStatus:
-            ownershipResult.status,
+            topHoldersResult.status,
           fundOwnershipStatus:
-            fundOwnershipResult.status,
+            topHoldersResult.status,
+        },
+        source: {
+          insiders: "Finnhub",
+          institutions:
+            "Business Quant / SEC 13F",
+          funds:
+            "Business Quant / SEC 13F",
         },
         generatedAt:
           new Date().toISOString(),
@@ -317,45 +434,69 @@ async function fetchOptionalJson(
   const controller =
     new AbortController();
 
-  const timeout = setTimeout(() => {
-    controller.abort();
-  }, REQUEST_TIMEOUT_MS);
+  const timeout =
+    setTimeout(() => {
+      controller.abort();
+    }, REQUEST_TIMEOUT_MS);
 
   try {
-    const response = await fetch(url, {
-      cache: "no-store",
-      signal: controller.signal,
-      headers: {
-        Accept: "application/json",
-      },
-    });
+    const response =
+      await fetch(url, {
+        cache: "no-store",
+        signal: controller.signal,
+        headers: {
+          Accept: "application/json",
+        },
+      });
 
-    if (!response.ok) {
-      return {
-        ok: false,
-        status: response.status,
-        data: null,
-      };
-    }
+    let data:
+      Record<string, any> | null =
+      null;
 
     try {
-      return {
-        ok: true,
-        status: response.status,
-        data:
-          (await response.json()) as Record<
-            string,
-            any
-          >,
-      };
+      data =
+        (await response.json()) as Record<
+          string,
+          any
+        >;
     } catch {
+      data = null;
+    }
+
+    if (!response.ok) {
+      console.error(
+        "Ownership upstream request failed:",
+        {
+          host:
+            url.hostname,
+          status:
+            response.status,
+          data,
+        }
+      );
+
       return {
         ok: false,
         status: response.status,
-        data: null,
+        data,
       };
     }
-  } catch {
+
+    return {
+      ok: true,
+      status: response.status,
+      data,
+    };
+  } catch (error) {
+    console.error(
+      "Ownership upstream fetch error:",
+      {
+        host:
+          url.hostname,
+        error,
+      }
+    );
+
     return {
       ok: false,
       status: null,
@@ -393,14 +534,17 @@ function normalizeInsider(
       typeof item.symbol === "string"
         ? item.symbol
         : "",
-    share: finiteNumber(item.share),
-    change: finiteNumber(
-      item.change
-    ),
+    share:
+      finiteNumber(item.share),
+    change:
+      finiteNumber(item.change),
     filingDate:
       typeof item.filingDate ===
       "string"
-        ? item.filingDate.slice(0, 10)
+        ? item.filingDate.slice(
+            0,
+            10
+          )
         : "",
     transactionDate,
     transactionCode:
@@ -415,13 +559,15 @@ function normalizeInsider(
   };
 }
 
-function normalizeOwnership(
-  item: OwnershipItem
-) {
+function normalizeBusinessQuantHolder(
+  item: BusinessQuantHolder
+): OwnershipHolder | null {
   const name =
-    typeof item.name === "string"
-      ? item.name.trim()
-      : "";
+    (
+      item.name_filer_short ||
+      item.name_filer ||
+      ""
+    ).trim();
 
   if (!name) {
     return null;
@@ -429,26 +575,86 @@ function normalizeOwnership(
 
   return {
     name,
-    share: finiteNumber(item.share),
-    change: finiteNumber(
-      item.change
-    ),
+    share:
+      finiteNumber(
+        item.shprn_amount
+      ),
+    change:
+      finiteNumber(
+        item.shares_change_qoq
+      ),
     filingDate:
-      typeof item.filingDate ===
-      "string"
-        ? item.filingDate.slice(0, 10)
-        : "",
-    portfolioPercent:
+      getDateOnly(
+        item.filingdate ||
+          item.reportperiod ||
+          item.quarter ||
+          ""
+      ),
+    ownershipPercent:
       finiteOrNull(
-        item.portfolioPercent
+        item.institution_pct
+      ),
+    positionValue:
+      finiteOrNull(
+        item.value
+      ),
+    changePercent:
+      finiteOrNull(
+        item.shares_change_qoq_pct
+      ),
+    rank:
+      finiteOrNull(
+        item.shareholder_rank
       ),
   };
+}
+
+function looksLikeFundManager(
+  name: string
+) {
+  const normalized =
+    name.toLowerCase();
+
+  const fundSignals = [
+    "fund",
+    "funds",
+    "etf",
+    "trust",
+    "asset management",
+    "asset managers",
+    "investment management",
+    "capital management",
+    "portfolio management",
+    "advisors",
+    "advisers",
+  ];
+
+  return fundSignals.some(
+    (signal) =>
+      normalized.includes(
+        signal
+      )
+  );
+}
+
+function getDateOnly(
+  value: string
+) {
+  if (!value) {
+    return "";
+  }
+
+  return value.slice(
+    0,
+    10
+  );
 }
 
 function finiteNumber(
   value: unknown
 ) {
-  const numberValue = Number(value);
+  const numberValue =
+    Number(value);
 
   return Number.isFinite(
     numberValue
@@ -460,7 +666,16 @@ function finiteNumber(
 function finiteOrNull(
   value: unknown
 ): number | null {
-  const numberValue = Number(value);
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return null;
+  }
+
+  const numberValue =
+    Number(value);
 
   return Number.isFinite(
     numberValue
@@ -473,14 +688,20 @@ function addDays(
   date: Date,
   days: number
 ) {
-  const result = new Date(date);
+  const result =
+    new Date(date);
+
   result.setDate(
-    result.getDate() + days
+    result.getDate() +
+      days
   );
+
   return result;
 }
 
-function formatDate(date: Date) {
+function formatDate(
+  date: Date
+) {
   return date
     .toISOString()
     .slice(0, 10);
