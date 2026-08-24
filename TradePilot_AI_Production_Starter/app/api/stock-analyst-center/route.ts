@@ -1,4 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 
 type Recommendation = {
   buy?: number;
@@ -18,86 +21,256 @@ type PriceTarget = {
   targetMedian?: number;
 };
 
-export const dynamic = "force-dynamic";
+type BQQuote = {
+  ticker?: string;
+  name?: string;
+  name_short?: string;
+  price?: number;
+  pricedate?: string;
+};
+
+type FetchResult = {
+  ok: boolean;
+  status: number | null;
+  data: unknown;
+};
+
+export const dynamic =
+  "force-dynamic";
 export const revalidate = 0;
 
-export async function GET(request: NextRequest) {
+const REQUEST_TIMEOUT_MS =
+  8_000;
+
+export async function GET(
+  request: NextRequest
+) {
   try {
-    const apiKey = process.env.FINNHUB_API_KEY;
+    const finnhubApiKey =
+      process.env.FINNHUB_API_KEY;
 
-    if (!apiKey) {
+    const businessQuantApiKey =
+      process.env
+        .BUSINESSQUANT_API_KEY;
+
+    if (!businessQuantApiKey) {
       return NextResponse.json(
-        { error: "FINNHUB_API_KEY is missing from .env.local." },
-        { status: 500 }
+        {
+          error:
+            "BUSINESSQUANT_API_KEY is missing.",
+        },
+        {
+          status: 500,
+          headers:
+            noStoreHeaders(),
+        }
       );
     }
 
-    const symbol = request.nextUrl.searchParams
-      .get("symbol")
-      ?.trim()
-      .toUpperCase();
+    const symbol =
+      request.nextUrl.searchParams
+        .get("symbol")
+        ?.trim()
+        .toUpperCase();
 
-    if (!symbol || !/^[A-Z0-9.-]{1,15}$/.test(symbol)) {
+    if (
+      !symbol ||
+      !/^[A-Z0-9.-]{1,15}$/.test(
+        symbol
+      )
+    ) {
       return NextResponse.json(
-        { error: "A valid stock symbol is required." },
-        { status: 400 }
+        {
+          error:
+            "A valid stock symbol is required.",
+        },
+        {
+          status: 400,
+          headers:
+            noStoreHeaders(),
+        }
       );
     }
 
-    const origin = request.nextUrl.origin;
+    /*
+     * BUSINESS QUANT
+     * Use the quote endpoint directly instead
+     * of calling another Norvexa API route.
+     * This removes the old <!DOCTYPE / invalid
+     * JSON failure caused by an internal route
+     * returning an HTML error page.
+     */
+    const quoteUrl =
+      new URL(
+        "https://data.businessquant.com/quotes"
+      );
 
-    const stockResponse = await fetch(
-      `${origin}/api/stock-details?symbol=${encodeURIComponent(symbol)}`,
-      { cache: "no-store" }
+    quoteUrl.searchParams.set(
+      "ticker",
+      symbol
     );
 
-    const stockData = await stockResponse.json();
+    quoteUrl.searchParams.set(
+      "mode",
+      "snapshot"
+    );
 
-    if (!stockResponse.ok || !stockData.stock) {
-      return NextResponse.json(
-        { error: stockData.error || `Unable to load ${symbol}.` },
-        { status: 404 }
+    quoteUrl.searchParams.set(
+      "api_key",
+      businessQuantApiKey
+    );
+
+    /*
+     * FINNHUB analyst endpoints remain
+     * optional. If the user's current
+     * Finnhub plan does not include one,
+     * Norvexa will return an unavailable
+     * state instead of crashing.
+     */
+    const recommendationUrl =
+      new URL(
+        "https://finnhub.io/api/v1/stock/recommendation"
+      );
+
+    recommendationUrl.searchParams.set(
+      "symbol",
+      symbol
+    );
+
+    if (finnhubApiKey) {
+      recommendationUrl.searchParams.set(
+        "token",
+        finnhubApiKey
       );
     }
 
-    const recommendationUrl = new URL(
-      "https://finnhub.io/api/v1/stock/recommendation"
+    const targetUrl =
+      new URL(
+        "https://finnhub.io/api/v1/stock/price-target"
+      );
+
+    targetUrl.searchParams.set(
+      "symbol",
+      symbol
     );
-    recommendationUrl.searchParams.set("symbol", symbol);
-    recommendationUrl.searchParams.set("token", apiKey);
 
-    const targetUrl = new URL(
-      "https://finnhub.io/api/v1/stock/price-target"
-    );
-    targetUrl.searchParams.set("symbol", symbol);
-    targetUrl.searchParams.set("token", apiKey);
+    if (finnhubApiKey) {
+      targetUrl.searchParams.set(
+        "token",
+        finnhubApiKey
+      );
+    }
 
-    const [recommendationResponse, targetResponse] =
-      await Promise.all([
-        fetch(recommendationUrl, { cache: "no-store" }),
-        fetch(targetUrl, { cache: "no-store" }),
-      ]);
+    const [
+      quoteResult,
+      recommendationResult,
+      targetResult,
+    ] = await Promise.all([
+      fetchOptionalJson(
+        quoteUrl
+      ),
 
-    const recommendationJson = recommendationResponse.ok
-      ? await recommendationResponse.json()
-      : [];
+      finnhubApiKey
+        ? fetchOptionalJson(
+            recommendationUrl
+          )
+        : Promise.resolve({
+            ok: false,
+            status: null,
+            data: null,
+          } as FetchResult),
 
-    const targetJson = targetResponse.ok
-      ? await targetResponse.json()
-      : null;
+      finnhubApiKey
+        ? fetchOptionalJson(
+            targetUrl
+          )
+        : Promise.resolve({
+            ok: false,
+            status: null,
+            data: null,
+          } as FetchResult),
+    ]);
 
-    const history: Recommendation[] = Array.isArray(recommendationJson)
-      ? recommendationJson.slice(0, 12)
-      : [];
+    const quoteRows =
+      Array.isArray(
+        quoteResult.data
+      )
+        ? (
+            quoteResult.data as BQQuote[]
+          )
+        : [];
 
-    const latest = history[0] ?? null;
+    const quote =
+      quoteRows.find(
+        (item) =>
+          item.ticker
+            ?.toUpperCase() ===
+          symbol
+      ) ||
+      quoteRows[0] ||
+      null;
+
+    if (
+      !quoteResult.ok ||
+      !quote ||
+      !Number.isFinite(
+        Number(quote.price)
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            `Unable to load ${symbol}.`,
+        },
+        {
+          status: 404,
+          headers:
+            noStoreHeaders(),
+        }
+      );
+    }
+
+    const recommendationJson =
+      recommendationResult.data;
+
+    const history:
+      Recommendation[] =
+      Array.isArray(
+        recommendationJson
+      )
+        ? (
+            recommendationJson as Recommendation[]
+          ).slice(0, 12)
+        : [];
+
+    const latest =
+      history[0] ?? null;
 
     const counts = {
-      strongBuy: numberOrZero(latest?.strongBuy),
-      buy: numberOrZero(latest?.buy),
-      hold: numberOrZero(latest?.hold),
-      sell: numberOrZero(latest?.sell),
-      strongSell: numberOrZero(latest?.strongSell),
+      strongBuy:
+        numberOrZero(
+          latest?.strongBuy
+        ),
+
+      buy:
+        numberOrZero(
+          latest?.buy
+        ),
+
+      hold:
+        numberOrZero(
+          latest?.hold
+        ),
+
+      sell:
+        numberOrZero(
+          latest?.sell
+        ),
+
+      strongSell:
+        numberOrZero(
+          latest?.strongSell
+        ),
     };
 
     const total =
@@ -110,34 +283,82 @@ export async function GET(request: NextRequest) {
     const weightedScore =
       total > 0
         ? (
-            counts.strongBuy * 5 +
+            counts.strongBuy *
+              5 +
             counts.buy * 4 +
             counts.hold * 3 +
             counts.sell * 2 +
             counts.strongSell
-          ) / total
+          ) /
+          total
         : null;
 
-    const currentPrice = Number(stockData.stock.price) || 0;
+    const currentPrice =
+      numberOrZero(
+        quote.price
+      );
+
+    const rawTarget =
+      isPlainObject(
+        targetResult.data
+      )
+        ? (
+            targetResult.data as PriceTarget
+          )
+        : null;
 
     const priceTarget =
-      targetJson &&
-      typeof targetJson === "object" &&
-      [targetJson.targetHigh, targetJson.targetLow, targetJson.targetMean]
-        .some((value) => Number(value) > 0)
+      rawTarget &&
+      [
+        rawTarget.targetHigh,
+        rawTarget.targetLow,
+        rawTarget.targetMean,
+      ].some(
+        (value) =>
+          Number(value) > 0
+      )
         ? {
             lastUpdated:
-              typeof targetJson.lastUpdated === "string"
-                ? targetJson.lastUpdated
+              typeof rawTarget.lastUpdated ===
+              "string"
+                ? rawTarget.lastUpdated
                 : "",
-            numberAnalysts: numberOrNull(targetJson.numberAnalysts),
-            targetHigh: numberOrNull(targetJson.targetHigh),
-            targetLow: numberOrNull(targetJson.targetLow),
-            targetMean: numberOrNull(targetJson.targetMean),
-            targetMedian: numberOrNull(targetJson.targetMedian),
+
+            numberAnalysts:
+              numberOrNull(
+                rawTarget.numberAnalysts
+              ),
+
+            targetHigh:
+              numberOrNull(
+                rawTarget.targetHigh
+              ),
+
+            targetLow:
+              numberOrNull(
+                rawTarget.targetLow
+              ),
+
+            targetMean:
+              numberOrNull(
+                rawTarget.targetMean
+              ),
+
+            targetMedian:
+              numberOrNull(
+                rawTarget.targetMedian
+              ),
+
             impliedUpsidePercent:
-              Number(targetJson.targetMean) > 0 && currentPrice > 0
-                ? ((Number(targetJson.targetMean) - currentPrice) /
+              Number(
+                rawTarget.targetMean
+              ) >
+                0 &&
+              currentPrice > 0
+                ? ((Number(
+                    rawTarget.targetMean
+                  ) -
+                    currentPrice) /
                     currentPrice) *
                   100
                 : null,
@@ -147,30 +368,79 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         symbol,
-        companyName: stockData.stock.name || symbol,
+
+        companyName:
+          quote.name ||
+          quote.name_short ||
+          symbol,
+
         currentPrice,
-        consensus: scoreToConsensus(weightedScore),
+
+        consensus:
+          scoreToConsensus(
+            weightedScore
+          ),
+
         weightedScore,
-        latestPeriod: latest?.period || "",
+
+        latestPeriod:
+          latest?.period ||
+          "",
+
         counts,
-        totalRecommendations: total,
+
+        totalRecommendations:
+          total,
+
         priceTarget,
+
         availability: {
-          recommendations: history.length > 0,
-          priceTargets: Boolean(priceTarget),
-          recommendationStatus: recommendationResponse.status,
-          priceTargetStatus: targetResponse.status,
+          recommendations:
+            history.length > 0,
+
+          priceTargets:
+            Boolean(
+              priceTarget
+            ),
+
+          recommendationStatus:
+            recommendationResult.status,
+
+          priceTargetStatus:
+            targetResult.status,
+
+          quoteStatus:
+            quoteResult.status,
         },
+
+        source: {
+          companyAndPrice:
+            "Business Quant Quotes",
+
+          recommendations:
+            history.length > 0
+              ? "Finnhub"
+              : "Unavailable",
+
+          priceTargets:
+            priceTarget
+              ? "Finnhub"
+              : "Unavailable",
+        },
+
+        generatedAt:
+          new Date().toISOString(),
       },
       {
-        headers: {
-          "Cache-Control":
-            "private, no-cache, no-store, max-age=0, must-revalidate",
-        },
+        headers:
+          noStoreHeaders(),
       }
     );
   } catch (error) {
-    console.error("Analyst Center API error:", error);
+    console.error(
+      "Analyst Center API error:",
+      error
+    );
 
     return NextResponse.json(
       {
@@ -179,26 +449,183 @@ export async function GET(request: NextRequest) {
             ? error.message
             : "Unable to load analyst data.",
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers:
+          noStoreHeaders(),
+      }
     );
   }
 }
 
-function scoreToConsensus(score: number | null) {
-  if (score === null) return "Unavailable";
-  if (score >= 4.5) return "Strong Buy";
-  if (score >= 3.6) return "Buy";
-  if (score >= 2.6) return "Hold";
-  if (score >= 1.6) return "Sell";
+async function fetchOptionalJson(
+  url: URL
+): Promise<FetchResult> {
+  const controller =
+    new AbortController();
+
+  const timeout =
+    setTimeout(() => {
+      controller.abort();
+    }, REQUEST_TIMEOUT_MS);
+
+  try {
+    const response =
+      await fetch(
+        url,
+        {
+          cache:
+            "no-store",
+
+          signal:
+            controller.signal,
+
+          headers: {
+            Accept:
+              "application/json",
+          },
+        }
+      );
+
+    const contentType =
+      response.headers.get(
+        "content-type"
+      ) || "";
+
+    /*
+     * Never blindly call .json().
+     * If an upstream service returns HTML,
+     * the old route could throw
+     * "Unexpected token '<'".
+     */
+    if (
+      !contentType.includes(
+        "application/json"
+      )
+    ) {
+      return {
+        ok: false,
+        status:
+          response.status,
+        data: null,
+      };
+    }
+
+    let data:
+      unknown = null;
+
+    try {
+      data =
+        await response.json();
+    } catch {
+      data = null;
+    }
+
+    return {
+      ok:
+        response.ok,
+
+      status:
+        response.status,
+
+      data,
+    };
+  } catch {
+    return {
+      ok: false,
+      status: null,
+      data: null,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function isPlainObject(
+  value: unknown
+): value is Record<
+  string,
+  unknown
+> {
+  return Boolean(
+    value &&
+      typeof value ===
+        "object" &&
+      !Array.isArray(value)
+  );
+}
+
+function scoreToConsensus(
+  score:
+    | number
+    | null
+) {
+  if (score === null) {
+    return "Unavailable";
+  }
+
+  if (score >= 4.5) {
+    return "Strong Buy";
+  }
+
+  if (score >= 3.6) {
+    return "Buy";
+  }
+
+  if (score >= 2.6) {
+    return "Hold";
+  }
+
+  if (score >= 1.6) {
+    return "Sell";
+  }
+
   return "Strong Sell";
 }
 
-function numberOrZero(value: unknown) {
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue : 0;
+function numberOrZero(
+  value: unknown
+) {
+  const numberValue =
+    Number(value);
+
+  return Number.isFinite(
+    numberValue
+  )
+    ? numberValue
+    : 0;
 }
 
-function numberOrNull(value: unknown) {
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue : null;
+function numberOrNull(
+  value: unknown
+): number | null {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return null;
+  }
+
+  const numberValue =
+    Number(value);
+
+  return Number.isFinite(
+    numberValue
+  )
+    ? numberValue
+    : null;
+}
+
+function noStoreHeaders() {
+  return {
+    "Cache-Control":
+      "private, no-cache, no-store, max-age=0, must-revalidate",
+
+    Pragma:
+      "no-cache",
+
+    Expires:
+      "0",
+  };
 }
