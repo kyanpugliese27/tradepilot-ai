@@ -1,61 +1,90 @@
-import { NextRequest, NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 
-type FinnhubDividend = {
-  symbol?: string;
-  date?: string;
-  exDate?: string;
-  amount?: number;
-  adjustedAmount?: number;
-  payDate?: string;
-  recordDate?: string;
-  declarationDate?: string;
+type BQDividendMetadata = {
+  ticker?: string;
+  cik?: number | string;
+  companyname?: string;
+  companyname_short?: string;
+  range?: string;
+  divyield?: number;
+  lastdividend?: string | null;
+  nextdividend?: string | null;
+  ttmdividend?: number;
+  mode?: string;
+};
+
+type BQDividendItem = {
+  dividend?: number;
+  ex_date?: string;
+  payment_date?: string;
+};
+
+type BQDividendResponse = {
+  metadata?: BQDividendMetadata;
+  data?: BQDividendItem[];
+  error?: string;
+  message?: string;
+};
+
+type BQQuote = {
+  ticker?: string;
+  name?: string;
+  name_short?: string;
+  price?: number;
+  pricedate?: string;
   currency?: string;
-  freq?: number;
 };
 
-type FundamentalsResponse = {
-  metrics?: {
-    dividendYield?: number | null;
-  };
+type FetchResult = {
+  ok: boolean;
+  status: number | null;
+  data: unknown;
 };
 
-type StockResponse = {
-  stock?: {
-    symbol: string;
-    name?: string;
-    price: number;
-    currency?: string;
-  };
-};
-
-export const dynamic = "force-dynamic";
+export const dynamic =
+  "force-dynamic";
 export const revalidate = 0;
 
-const REQUEST_TIMEOUT_MS = 8_000;
+const REQUEST_TIMEOUT_MS =
+  8_000;
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest
+) {
   try {
-    const apiKey = process.env.FINNHUB_API_KEY;
+    const apiKey =
+      process.env
+        .BUSINESSQUANT_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
         {
           error:
-            "FINNHUB_API_KEY is missing from .env.local.",
+            "BUSINESSQUANT_API_KEY is missing.",
         },
         {
           status: 500,
-          headers: noStoreHeaders(),
+          headers:
+            noStoreHeaders(),
         }
       );
     }
 
-    const symbol = request.nextUrl.searchParams
-      .get("symbol")
-      ?.trim()
-      .toUpperCase();
+    const symbol =
+      request.nextUrl.searchParams
+        .get("symbol")
+        ?.trim()
+        .toUpperCase();
 
-    if (!symbol || !/^[A-Z0-9.-]{1,15}$/.test(symbol)) {
+    if (
+      !symbol ||
+      !/^[A-Z0-9.-]{1,15}$/.test(
+        symbol
+      )
+    ) {
       return NextResponse.json(
         {
           error:
@@ -63,168 +92,374 @@ export async function GET(request: NextRequest) {
         },
         {
           status: 400,
-          headers: noStoreHeaders(),
+          headers:
+            noStoreHeaders(),
         }
       );
     }
 
-    const origin = request.nextUrl.origin;
+    /*
+     * BUSINESS QUANT DIVIDENDS
+     *
+     * mode=dps returns:
+     * - historical dividend/share payments
+     * - ex-dividend dates
+     * - payment dates
+     * - TTM dividend
+     * - current dividend yield
+     */
+    const dividendUrl =
+      new URL(
+        "https://data.businessquant.com/dividends"
+      );
 
-    const [stockData, fundamentalsData] =
-      await Promise.all([
-        fetchJson(
-          `${origin}/api/stock-details?symbol=${encodeURIComponent(
-            symbol
-          )}`
-        ),
-        fetchJson(
-          `${origin}/api/stock-fundamentals?symbol=${encodeURIComponent(
-            symbol
-          )}`
-        ),
-      ]);
+    dividendUrl.searchParams.set(
+      "ticker",
+      symbol
+    );
 
-    const stock =
-      (stockData as StockResponse | null)?.stock ??
+    dividendUrl.searchParams.set(
+      "mode",
+      "dps"
+    );
+
+    dividendUrl.searchParams.set(
+      "api_key",
+      apiKey
+    );
+
+    /*
+     * BUSINESS QUANT QUOTES
+     *
+     * We fetch the current price directly
+     * instead of depending on another
+     * Norvexa API route.
+     */
+    const quoteUrl =
+      new URL(
+        "https://data.businessquant.com/quotes"
+      );
+
+    quoteUrl.searchParams.set(
+      "ticker",
+      symbol
+    );
+
+    quoteUrl.searchParams.set(
+      "mode",
+      "snapshot"
+    );
+
+    quoteUrl.searchParams.set(
+      "api_key",
+      apiKey
+    );
+
+    const [
+      dividendResult,
+      quoteResult,
+    ] = await Promise.all([
+      fetchProvider(
+        dividendUrl
+      ),
+      fetchProvider(
+        quoteUrl
+      ),
+    ]);
+
+    const dividendData =
+      isPlainObject(
+        dividendResult.data
+      )
+        ? (
+            dividendResult.data as BQDividendResponse
+          )
+        : null;
+
+    const quoteRows =
+      Array.isArray(
+        quoteResult.data
+      )
+        ? (
+            quoteResult.data as BQQuote[]
+          )
+        : [];
+
+    const quote =
+      quoteRows.find(
+        (item) =>
+          item.ticker
+            ?.toUpperCase() ===
+          symbol
+      ) ||
+      quoteRows[0] ||
       null;
 
-    if (!stock) {
+    if (
+      !quoteResult.ok ||
+      !quote ||
+      !Number.isFinite(
+        Number(quote.price)
+      )
+    ) {
       return NextResponse.json(
         {
-          error: `Unable to load ${symbol}.`,
+          error:
+            `Unable to load ${symbol}.`,
         },
         {
           status: 404,
-          headers: noStoreHeaders(),
+          headers:
+            noStoreHeaders(),
         }
       );
     }
 
-    const dividendYield = finiteOrNull(
-      (fundamentalsData as FundamentalsResponse | null)
-        ?.metrics?.dividendYield
-    );
+    const metadata =
+      dividendData?.metadata ||
+      {};
 
-    const today = new Date();
-    const from = new Date(today);
-    from.setFullYear(from.getFullYear() - 5);
-
-    const dividendUrl = new URL(
-      "https://finnhub.io/api/v1/stock/dividend"
-    );
-
-    dividendUrl.searchParams.set("symbol", symbol);
-    dividendUrl.searchParams.set("from", formatDate(from));
-    dividendUrl.searchParams.set("to", formatDate(today));
-    dividendUrl.searchParams.set("token", apiKey);
-
-    const result = await fetchProvider(dividendUrl);
-
-    const rawDividends = Array.isArray(result.data)
-      ? (result.data as FinnhubDividend[])
-      : [];
-
-    const dividends = rawDividends
-      .map(normalizeDividend)
-      .filter(
-        (
-          item
-        ): item is NonNullable<
-          ReturnType<typeof normalizeDividend>
-        > => item !== null
+    const rawDividends =
+      Array.isArray(
+        dividendData?.data
       )
-      .sort((a, b) =>
-        b.exDate.localeCompare(a.exDate)
+        ? dividendData!.data!
+        : [];
+
+    const normalizedBase =
+      rawDividends
+        .map(
+          normalizeBusinessQuantDividend
+        )
+        .filter(
+          (
+            item
+          ): item is NonNullable<
+            ReturnType<
+              typeof normalizeBusinessQuantDividend
+            >
+          > =>
+            item !== null
+        )
+        .sort(
+          (a, b) =>
+            b.exDate.localeCompare(
+              a.exDate
+            )
+        );
+
+    const today =
+      new Date();
+
+    const cutoff =
+      new Date(today);
+
+    cutoff.setFullYear(
+      cutoff.getFullYear() -
+        1
+    );
+
+    const paymentsLast12Months =
+      normalizedBase.filter(
+        (item) => {
+          const date =
+            new Date(
+              `${item.exDate}T12:00:00`
+            );
+
+          return (
+            !Number.isNaN(
+              date.getTime()
+            ) &&
+            date >= cutoff
+          );
+        }
       );
 
-    const latestDividend = dividends[0] ?? null;
+    const inferredFrequency =
+      inferFrequency(
+        paymentsLast12Months.length
+      );
 
-    const paymentsLast12Months = dividends.filter(
-      (item) => {
-        const date = new Date(
-          `${item.exDate}T12:00:00`
-        );
+    const dividends =
+      normalizedBase.map(
+        (item) => ({
+          ...item,
+          frequency:
+            inferredFrequency,
+        })
+      );
 
-        const cutoff = new Date(today);
-        cutoff.setFullYear(
-          cutoff.getFullYear() - 1
-        );
+    const latestDividend =
+      dividends[0] ??
+      null;
 
-        return (
-          !Number.isNaN(date.getTime()) &&
-          date >= cutoff
-        );
-      }
-    );
+    const currentPrice =
+      finiteNumber(
+        quote.price
+      );
 
-    const annualDividendPerShare =
+    const metadataTtm =
+      finiteOrNull(
+        metadata.ttmdividend
+      );
+
+    const calculatedTtm =
       paymentsLast12Months.reduce(
         (sum, item) =>
           sum +
-          (item.adjustedAmount ??
-            item.amount),
+          item.amount,
         0
       );
 
+    const annualDividendPerShare =
+      metadataTtm ??
+      (
+        calculatedTtm > 0
+          ? calculatedTtm
+          : null
+      );
+
+    /*
+     * Business Quant returns divyield
+     * as a decimal:
+     * 0.0035 = 0.35%.
+     *
+     * Norvexa's existing frontend expects
+     * percentage points, so multiply by 100.
+     */
+    const metadataYieldDecimal =
+      finiteOrNull(
+        metadata.divyield
+      );
+
+    const providerYield =
+      metadataYieldDecimal !==
+      null
+        ? metadataYieldDecimal *
+          100
+        : null;
+
     const calculatedYield =
-      stock.price > 0 &&
+      currentPrice > 0 &&
+      annualDividendPerShare !==
+        null &&
       annualDividendPerShare > 0
         ? (annualDividendPerShare /
-            stock.price) *
+            currentPrice) *
           100
         : null;
 
     const fiveYearAnnualTotals =
-      buildAnnualTotals(dividends);
+      buildAnnualTotals(
+        dividends
+      );
 
     const dividendGrowthPercent =
       calculateAnnualGrowth(
         fiveYearAnnualTotals
       );
 
+    const nextDividend =
+      typeof metadata.nextdividend ===
+        "string" &&
+      metadata.nextdividend
+        ? metadata.nextdividend.slice(
+            0,
+            10
+          )
+        : null;
+
     return NextResponse.json(
       {
         symbol,
-        companyName: stock.name || symbol,
-        currentPrice: stock.price,
+
+        companyName:
+          metadata.companyname ||
+          metadata.companyname_short ||
+          quote.name ||
+          quote.name_short ||
+          symbol,
+
+        currentPrice,
+
         currency:
-          stock.currency ||
+          quote.currency ||
           latestDividend?.currency ||
           "USD",
+
         dividendYield:
-          dividendYield ?? calculatedYield,
+          providerYield ??
+          calculatedYield,
+
         calculatedYield,
-        annualDividendPerShare:
-          annualDividendPerShare > 0
-            ? annualDividendPerShare
-            : null,
+
+        annualDividendPerShare,
+
         latestDividend,
-        dividends: dividends.slice(0, 24),
-        annualTotals: fiveYearAnnualTotals,
+
+        nextDividend,
+
+        dividends:
+          dividends.slice(
+            0,
+            24
+          ),
+
+        annualTotals:
+          fiveYearAnnualTotals,
+
         dividendGrowthPercent,
+
         paymentsLast12Months:
           paymentsLast12Months.length,
+
         availability: {
-          history: dividends.length > 0,
-          providerStatus: result.status,
+          history:
+            dividends.length > 0,
+
+          providerStatus:
+            dividendResult.status,
+
+          quoteStatus:
+            quoteResult.status,
+
           premiumBlocked:
-            result.status === 401 ||
-            result.status === 403,
+            false,
+
           rateLimited:
-            result.status === 429,
+            dividendResult.status ===
+              429 ||
+            quoteResult.status ===
+              429,
+
           temporaryFailure:
-            result.status === 500 ||
-            result.status === 502 ||
-            result.status === 503 ||
-            result.status === 504 ||
-            result.status === null,
+            [
+              500,
+              502,
+              503,
+              504,
+              null,
+            ].includes(
+              dividendResult.status
+            ),
         },
+
+        source: {
+          dividends:
+            "Business Quant",
+
+          price:
+            "Business Quant Quotes",
+        },
+
         generatedAt:
           new Date().toISOString(),
       },
       {
         status: 200,
-        headers: noStoreHeaders(),
+        headers:
+          noStoreHeaders(),
       }
     );
   } catch (error) {
@@ -242,155 +477,260 @@ export async function GET(request: NextRequest) {
       },
       {
         status: 500,
-        headers: noStoreHeaders(),
+        headers:
+          noStoreHeaders(),
       }
     );
   }
 }
 
-async function fetchProvider(url: URL) {
-  const controller = new AbortController();
+async function fetchProvider(
+  url: URL
+): Promise<FetchResult> {
+  const controller =
+    new AbortController();
 
-  const timeout = setTimeout(() => {
-    controller.abort();
-  }, REQUEST_TIMEOUT_MS);
+  const timeout =
+    setTimeout(() => {
+      controller.abort();
+    }, REQUEST_TIMEOUT_MS);
 
   try {
-    const response = await fetch(url, {
-      cache: "no-store",
-      signal: controller.signal,
-      headers: {
-        Accept: "application/json",
-      },
-    });
+    const response =
+      await fetch(
+        url,
+        {
+          cache:
+            "no-store",
 
-    if (!response.ok) {
+          signal:
+            controller.signal,
+
+          headers: {
+            Accept:
+              "application/json",
+          },
+        }
+      );
+
+    const contentType =
+      response.headers.get(
+        "content-type"
+      ) || "";
+
+    if (
+      !contentType.includes(
+        "application/json"
+      )
+    ) {
       return {
-        status: response.status,
-        data: null as unknown,
+        ok: false,
+        status:
+          response.status,
+        data: null,
       };
     }
+
+    let data:
+      unknown = null;
 
     try {
-      return {
-        status: response.status,
-        data: await response.json(),
-      };
+      data =
+        await response.json();
     } catch {
-      return {
-        status: response.status,
-        data: null as unknown,
-      };
+      data = null;
     }
+
+    return {
+      ok:
+        response.ok,
+
+      status:
+        response.status,
+
+      data,
+    };
   } catch {
     return {
+      ok: false,
       status: null,
-      data: null as unknown,
+      data: null,
     };
   } finally {
-    clearTimeout(timeout);
+    clearTimeout(
+      timeout
+    );
   }
 }
 
-async function fetchJson(
-  url: string
-): Promise<Record<string, unknown> | null> {
-  try {
-    const response = await fetch(url, {
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    return (await response.json()) as Record<
-      string,
-      unknown
-    >;
-  } catch {
-    return null;
-  }
-}
-
-function normalizeDividend(
-  item: FinnhubDividend
+function normalizeBusinessQuantDividend(
+  item: BQDividendItem
 ) {
   const exDate =
-    typeof item.date === "string"
-      ? item.date.slice(0, 10)
-      : typeof item.exDate === "string"
-        ? item.exDate.slice(0, 10)
-        : "";
+    typeof item.ex_date ===
+      "string"
+      ? item.ex_date.slice(
+          0,
+          10
+        )
+      : "";
 
-  const amount = finiteOrNull(item.amount);
+  const amount =
+    finiteOrNull(
+      item.dividend
+    );
 
-  if (!exDate || amount === null) {
+  if (
+    !exDate ||
+    amount === null
+  ) {
     return null;
   }
 
   return {
-    symbol:
-      typeof item.symbol === "string"
-        ? item.symbol
-        : "",
+    symbol: "",
+
     exDate,
+
     amount,
+
+    /*
+     * Business Quant's DPS history is
+     * already per-share dividend data.
+     */
     adjustedAmount:
-      finiteOrNull(item.adjustedAmount),
+      amount,
+
     payDate:
-      typeof item.payDate === "string"
-        ? item.payDate.slice(0, 10)
+      typeof item.payment_date ===
+        "string"
+        ? item.payment_date.slice(
+            0,
+            10
+          )
         : "",
+
+    /*
+     * These fields are not supplied by
+     * Business Quant's DPS endpoint.
+     * Keep them for compatibility with
+     * the existing Norvexa frontend.
+     */
     recordDate:
-      typeof item.recordDate === "string"
-        ? item.recordDate.slice(0, 10)
-        : "",
+      "",
+
     declarationDate:
-      typeof item.declarationDate === "string"
-        ? item.declarationDate.slice(0, 10)
-        : "",
+      "",
+
     currency:
-      typeof item.currency === "string"
-        ? item.currency
-        : "USD",
+      "USD",
+
     frequency:
-      frequencyLabel(item.freq),
+      "Unknown",
   };
+}
+
+function inferFrequency(
+  paymentsLast12Months: number
+) {
+  if (
+    paymentsLast12Months >=
+    10
+  ) {
+    return "Monthly";
+  }
+
+  if (
+    paymentsLast12Months >=
+    4
+  ) {
+    return "Quarterly";
+  }
+
+  if (
+    paymentsLast12Months >=
+    2
+  ) {
+    return "Semiannual";
+  }
+
+  if (
+    paymentsLast12Months ===
+    1
+  ) {
+    return "Annual";
+  }
+
+  return "Unknown";
 }
 
 function buildAnnualTotals(
   dividends: Array<{
     exDate: string;
     amount: number;
-    adjustedAmount: number | null;
+    adjustedAmount:
+      | number
+      | null;
   }>
 ) {
-  const totals = new Map<number, number>();
+  const totals =
+    new Map<
+      number,
+      number
+    >();
 
-  for (const dividend of dividends) {
-    const year = Number(
-      dividend.exDate.slice(0, 4)
-    );
+  for (
+    const dividend
+    of dividends
+  ) {
+    const year =
+      Number(
+        dividend.exDate.slice(
+          0,
+          4
+        )
+      );
 
-    if (!Number.isInteger(year)) {
+    if (
+      !Number.isInteger(
+        year
+      )
+    ) {
       continue;
     }
 
     totals.set(
       year,
-      (totals.get(year) || 0) +
-        (dividend.adjustedAmount ??
-          dividend.amount)
+      (
+        totals.get(
+          year
+        ) ||
+        0
+      ) +
+        (
+          dividend.adjustedAmount ??
+          dividend.amount
+        )
     );
   }
 
-  return Array.from(totals.entries())
-    .map(([year, total]) => ({
-      year,
-      total,
-    }))
-    .sort((a, b) => b.year - a.year)
+  return Array.from(
+    totals.entries()
+  )
+    .map(
+      ([
+        year,
+        total,
+      ]) => ({
+        year,
+        total,
+      })
+    )
+    .sort(
+      (a, b) =>
+        b.year -
+        a.year
+    )
     .slice(0, 5);
 }
 
@@ -400,68 +740,97 @@ function calculateAnnualGrowth(
     total: number;
   }>
 ) {
-  if (totals.length < 2) {
+  if (
+    totals.length < 2
+  ) {
     return null;
   }
 
-  const latest = totals[0]?.total;
-  const previous = totals[1]?.total;
+  const latest =
+    totals[0]?.total;
+
+  const previous =
+    totals[1]?.total;
 
   if (
-    !latest ||
-    !previous ||
+    latest ===
+      undefined ||
+    previous ===
+      undefined ||
     previous === 0
   ) {
     return null;
   }
 
   return (
-    ((latest - previous) /
-      Math.abs(previous)) *
+    ((latest -
+      previous) /
+      Math.abs(
+        previous
+      )) *
     100
   );
 }
 
-function frequencyLabel(
+function isPlainObject(
+  value: unknown
+): value is Record<
+  string,
+  unknown
+> {
+  return Boolean(
+    value &&
+      typeof value ===
+        "object" &&
+      !Array.isArray(
+        value
+      )
+  );
+}
+
+function finiteNumber(
   value: unknown
 ) {
-  const frequency = Number(value);
+  const numberValue =
+    Number(value);
 
-  const labels: Record<number, string> = {
-    0: "Annual",
-    1: "Monthly",
-    2: "Quarterly",
-    3: "Semiannual",
-    4: "Other",
-    5: "Bimonthly",
-    6: "Trimesterly",
-    7: "Weekly",
-  };
-
-  return labels[frequency] || "Unknown";
+  return Number.isFinite(
+    numberValue
+  )
+    ? numberValue
+    : 0;
 }
 
 function finiteOrNull(
   value: unknown
 ): number | null {
-  const numberValue = Number(value);
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return null;
+  }
 
-  return Number.isFinite(numberValue)
+  const numberValue =
+    Number(value);
+
+  return Number.isFinite(
+    numberValue
+  )
     ? numberValue
     : null;
-}
-
-function formatDate(date: Date) {
-  return date
-    .toISOString()
-    .slice(0, 10);
 }
 
 function noStoreHeaders() {
   return {
     "Cache-Control":
       "private, no-cache, no-store, max-age=0, must-revalidate",
-    Pragma: "no-cache",
-    Expires: "0",
+
+    Pragma:
+      "no-cache",
+
+    Expires:
+      "0",
   };
 }
