@@ -29,6 +29,26 @@ type BQQuote = {
   pricedate?: string;
 };
 
+type BQEstimateRow = {
+  period?: string;
+  sno?: number;
+  data_type?: string;
+  value_estimate?: number;
+  value_reported?: number | null;
+  high_estimate?: number;
+  low_estimate?: number;
+};
+
+type ForwardEstimateSummary = {
+  period: string;
+  epsConsensus: number | null;
+  epsHigh: number | null;
+  epsLow: number | null;
+  revenueConsensus: number | null;
+  revenueHigh: number | null;
+  revenueLow: number | null;
+};
+
 type FetchResult = {
   ok: boolean;
   status: number | null;
@@ -92,14 +112,6 @@ export async function GET(
       );
     }
 
-    /*
-     * BUSINESS QUANT
-     * Use the quote endpoint directly instead
-     * of calling another Norvexa API route.
-     * This removes the old <!DOCTYPE / invalid
-     * JSON failure caused by an internal route
-     * returning an HTML error page.
-     */
     const quoteUrl =
       new URL(
         "https://data.businessquant.com/quotes"
@@ -109,24 +121,51 @@ export async function GET(
       "ticker",
       symbol
     );
-
     quoteUrl.searchParams.set(
       "mode",
       "snapshot"
     );
-
     quoteUrl.searchParams.set(
       "api_key",
       businessQuantApiKey
     );
 
-    /*
-     * FINNHUB analyst endpoints remain
-     * optional. If the user's current
-     * Finnhub plan does not include one,
-     * Norvexa will return an unavailable
-     * state instead of crashing.
-     */
+    const epsEstimateUrl =
+      new URL(
+        "https://data.businessquant.com/estimates"
+      );
+
+    epsEstimateUrl.searchParams.set(
+      "ticker",
+      symbol
+    );
+    epsEstimateUrl.searchParams.set(
+      "mode",
+      "eps"
+    );
+    epsEstimateUrl.searchParams.set(
+      "api_key",
+      businessQuantApiKey
+    );
+
+    const revenueEstimateUrl =
+      new URL(
+        "https://data.businessquant.com/estimates"
+      );
+
+    revenueEstimateUrl.searchParams.set(
+      "ticker",
+      symbol
+    );
+    revenueEstimateUrl.searchParams.set(
+      "mode",
+      "revenue"
+    );
+    revenueEstimateUrl.searchParams.set(
+      "api_key",
+      businessQuantApiKey
+    );
+
     const recommendationUrl =
       new URL(
         "https://finnhub.io/api/v1/stock/recommendation"
@@ -165,6 +204,8 @@ export async function GET(
       quoteResult,
       recommendationResult,
       targetResult,
+      epsEstimateResult,
+      revenueEstimateResult,
     ] = await Promise.all([
       fetchOptionalJson(
         quoteUrl
@@ -189,6 +230,14 @@ export async function GET(
             status: null,
             data: null,
           } as FetchResult),
+
+      fetchOptionalJson(
+        epsEstimateUrl
+      ),
+
+      fetchOptionalJson(
+        revenueEstimateUrl
+      ),
     ]);
 
     const quoteRows =
@@ -298,6 +347,12 @@ export async function GET(
         quote.price
       );
 
+    /*
+     * Keep the old Finnhub price-target
+     * object when it happens to be
+     * available so other parts of Norvexa
+     * remain backward-compatible.
+     */
     const rawTarget =
       isPlainObject(
         targetResult.data
@@ -365,6 +420,82 @@ export async function GET(
           }
         : null;
 
+    /*
+     * Business Quant's estimates endpoint
+     * returns both historical/reporting rows
+     * and forward estimate rows. We walk the
+     * response recursively so this remains
+     * resilient to whether BQ wraps annual and
+     * quarterly arrays under data/annual/etc.
+     */
+    const epsRows =
+      collectEstimateRows(
+        epsEstimateResult.data
+      );
+
+    const revenueRows =
+      collectEstimateRows(
+        revenueEstimateResult.data
+      );
+
+    const nextAnnualEps =
+      pickNextAnnualEstimate(
+        epsRows
+      );
+
+    const nextAnnualRevenue =
+      pickNextAnnualEstimate(
+        revenueRows
+      );
+
+    const forwardEstimates:
+      ForwardEstimateSummary | null =
+      nextAnnualEps ||
+      nextAnnualRevenue
+        ? {
+            period:
+              nextAnnualEps?.period ||
+              nextAnnualRevenue?.period ||
+              "Next fiscal year",
+
+            epsConsensus:
+              numberOrNull(
+                nextAnnualEps
+                  ?.value_estimate
+              ),
+
+            epsHigh:
+              numberOrNull(
+                nextAnnualEps
+                  ?.high_estimate
+              ),
+
+            epsLow:
+              numberOrNull(
+                nextAnnualEps
+                  ?.low_estimate
+              ),
+
+            revenueConsensus:
+              numberOrNull(
+                nextAnnualRevenue
+                  ?.value_estimate
+              ),
+
+            revenueHigh:
+              numberOrNull(
+                nextAnnualRevenue
+                  ?.high_estimate
+              ),
+
+            revenueLow:
+              numberOrNull(
+                nextAnnualRevenue
+                  ?.low_estimate
+              ),
+          }
+        : null;
+
     return NextResponse.json(
       {
         symbol,
@@ -392,7 +523,11 @@ export async function GET(
         totalRecommendations:
           total,
 
+        // Backward compatibility.
         priceTarget,
+
+        // New Business Quant analyst data.
+        forwardEstimates,
 
         availability: {
           recommendations:
@@ -403,6 +538,23 @@ export async function GET(
               priceTarget
             ),
 
+          forwardEstimates:
+            Boolean(
+              forwardEstimates
+            ),
+
+          epsEstimates:
+            epsEstimateResult.ok &&
+            Boolean(
+              nextAnnualEps
+            ),
+
+          revenueEstimates:
+            revenueEstimateResult.ok &&
+            Boolean(
+              nextAnnualRevenue
+            ),
+
           recommendationStatus:
             recommendationResult.status,
 
@@ -411,6 +563,12 @@ export async function GET(
 
           quoteStatus:
             quoteResult.status,
+
+          epsEstimateStatus:
+            epsEstimateResult.status,
+
+          revenueEstimateStatus:
+            revenueEstimateResult.status,
         },
 
         source: {
@@ -425,6 +583,11 @@ export async function GET(
           priceTargets:
             priceTarget
               ? "Finnhub"
+              : "Unavailable",
+
+          forwardEstimates:
+            forwardEstimates
+              ? "Business Quant"
               : "Unavailable",
         },
 
@@ -492,12 +655,6 @@ async function fetchOptionalJson(
         "content-type"
       ) || "";
 
-    /*
-     * Never blindly call .json().
-     * If an upstream service returns HTML,
-     * the old route could throw
-     * "Unexpected token '<'".
-     */
     if (
       !contentType.includes(
         "application/json"
@@ -541,11 +698,178 @@ async function fetchOptionalJson(
   }
 }
 
+function collectEstimateRows(
+  value: unknown
+): BQEstimateRow[] {
+  const rows:
+    BQEstimateRow[] = [];
+
+  walkEstimateResponse(
+    value,
+    rows
+  );
+
+  return rows;
+}
+
+function walkEstimateResponse(
+  value: unknown,
+  rows: BQEstimateRow[]
+) {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      walkEstimateResponse(
+        item,
+        rows
+      );
+    }
+
+    return;
+  }
+
+  if (!isPlainObject(value)) {
+    return;
+  }
+
+  const looksLikeEstimate =
+    typeof value.period ===
+      "string" &&
+    typeof value.data_type ===
+      "string" &&
+    (
+      value.value_estimate !==
+        undefined ||
+      value.high_estimate !==
+        undefined ||
+      value.low_estimate !==
+        undefined
+    );
+
+  if (looksLikeEstimate) {
+    rows.push({
+      period:
+        String(
+          value.period
+        ),
+
+      sno:
+        numberOrNull(
+          value.sno
+        ) ??
+        undefined,
+
+      data_type:
+        String(
+          value.data_type
+        ),
+
+      value_estimate:
+        numberOrNull(
+          value.value_estimate
+        ) ??
+        undefined,
+
+      value_reported:
+        numberOrNull(
+          value.value_reported
+        ),
+
+      high_estimate:
+        numberOrNull(
+          value.high_estimate
+        ) ??
+        undefined,
+
+      low_estimate:
+        numberOrNull(
+          value.low_estimate
+        ) ??
+        undefined,
+    });
+  }
+
+  for (const child of Object.values(
+    value
+  )) {
+    walkEstimateResponse(
+      child,
+      rows
+    );
+  }
+}
+
+function pickNextAnnualEstimate(
+  rows: BQEstimateRow[]
+) {
+  const annualEstimates =
+    rows.filter(
+      (row) =>
+        row.data_type
+          ?.toLowerCase() ===
+          "estimate" &&
+        isAnnualPeriod(
+          row.period
+        )
+    );
+
+  if (
+    annualEstimates.length ===
+    0
+  ) {
+    return null;
+  }
+
+  return annualEstimates.sort(
+    (a, b) => {
+      const aPeriod =
+        Number(
+          a.period
+        );
+
+      const bPeriod =
+        Number(
+          b.period
+        );
+
+      if (
+        Number.isFinite(
+          aPeriod
+        ) &&
+        Number.isFinite(
+          bPeriod
+        )
+      ) {
+        return (
+          aPeriod -
+          bPeriod
+        );
+      }
+
+      return (
+        (a.sno ?? 9999) -
+        (b.sno ?? 9999)
+      );
+    }
+  )[0];
+}
+
+function isAnnualPeriod(
+  period?: string
+) {
+  if (!period) {
+    return false;
+  }
+
+  return /^\d{4}$/.test(
+    period.trim()
+  );
+}
+
 function isPlainObject(
   value: unknown
 ): value is Record<
   string,
-  unknown
+  any
 > {
   return Boolean(
     value &&

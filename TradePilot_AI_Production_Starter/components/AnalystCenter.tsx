@@ -30,11 +30,32 @@ type AnalystData = {
     targetMedian: number | null;
     impliedUpsidePercent: number | null;
   } | null;
+  forwardEstimates: {
+    period: string;
+    epsConsensus: number | null;
+    epsHigh: number | null;
+    epsLow: number | null;
+    revenueConsensus: number | null;
+    revenueHigh: number | null;
+    revenueLow: number | null;
+  } | null;
   availability: {
     recommendations: boolean;
     priceTargets: boolean;
-    recommendationStatus: number;
-    priceTargetStatus: number;
+    forwardEstimates: boolean;
+    epsEstimates: boolean;
+    revenueEstimates: boolean;
+    recommendationStatus: number | null;
+    priceTargetStatus: number | null;
+    quoteStatus: number | null;
+    epsEstimateStatus: number | null;
+    revenueEstimateStatus: number | null;
+  };
+  source?: {
+    companyAndPrice?: string;
+    recommendations?: string;
+    priceTargets?: string;
+    forwardEstimates?: string;
   };
   error?: string;
 };
@@ -96,7 +117,7 @@ export default function AnalystCenter({
       <section className="card" style={sectionStyle}>
         <h2>Loading Analyst Center...</h2>
         <p className="muted">
-          Gathering analyst recommendations and price targets.
+          Gathering analyst recommendations and forward estimates.
         </p>
       </section>
     );
@@ -139,7 +160,7 @@ export default function AnalystCenter({
           </h2>
 
           <p className="muted" style={{ fontSize: 12 }}>
-            Analyst consensus and target data for {data.symbol}
+            Analyst consensus and forward estimates for {data.symbol}
           </p>
         </div>
 
@@ -215,7 +236,7 @@ export default function AnalystCenter({
               />
             </div>
           ) : (
-            <Unavailable text="Recommendation trends are unavailable for this symbol or your Finnhub plan." />
+            <Unavailable text="Recommendation trends are unavailable for this symbol." />
           )}
         </div>
       </div>
@@ -227,35 +248,39 @@ export default function AnalystCenter({
         />
 
         <TargetCard
-          label="Mean Target"
-          value={formatCurrency(
-            data.priceTarget?.targetMean ?? null
+          label={`Forward EPS${
+            data.forwardEstimates?.period
+              ? ` (${data.forwardEstimates.period})`
+              : ""
+          }`}
+          value={formatNumber(
+            data.forwardEstimates?.epsConsensus ?? null
           )}
         />
 
         <TargetCard
-          label="Median Target"
-          value={formatCurrency(
-            data.priceTarget?.targetMedian ?? null
+          label="EPS High"
+          value={formatNumber(
+            data.forwardEstimates?.epsHigh ?? null
           )}
         />
 
         <TargetCard
-          label="High Target"
-          value={formatCurrency(
-            data.priceTarget?.targetHigh ?? null
+          label="EPS Low"
+          value={formatNumber(
+            data.forwardEstimates?.epsLow ?? null
           )}
         />
 
         <TargetCard
-          label="Low Target"
-          value={formatCurrency(
-            data.priceTarget?.targetLow ?? null
+          label="Revenue Consensus"
+          value={formatCompactCurrency(
+            data.forwardEstimates?.revenueConsensus ?? null
           )}
         />
       </div>
 
-      {data.priceTarget ? (
+      {data.forwardEstimates ? (
         <div
           style={{
             ...panelStyle,
@@ -263,44 +288,57 @@ export default function AnalystCenter({
           }}
         >
           <span className="muted">
-            Implied upside/downside
+            Forward analyst estimates
           </span>
 
           <strong
             style={{
               display: "block",
               marginTop: 8,
-              color:
-                (
-                  data.priceTarget
-                    .impliedUpsidePercent ?? 0
-                ) >= 0
-                  ? "#4ade80"
-                  : "#ff8a8a",
-              fontSize: 25,
+              color: "#60a5fa",
+              fontSize: 20,
             }}
           >
-            {formatPercent(
-              data.priceTarget
-                .impliedUpsidePercent
-            )}
+            Fiscal {data.forwardEstimates.period}
           </strong>
 
-          <p className="muted" style={{ fontSize: 11 }}>
-            Based on{" "}
-            {data.priceTarget.numberAnalysts ??
-              "an unavailable number of"}{" "}
-            analysts
+          <p
+            className="muted"
+            style={{
+              margin: "8px 0 0",
+              fontSize: 11,
+              lineHeight: 1.6,
+            }}
+          >
+            Revenue range:{" "}
+            {formatCompactCurrency(
+              data.forwardEstimates.revenueLow
+            )}{" "}
+            to{" "}
+            {formatCompactCurrency(
+              data.forwardEstimates.revenueHigh
+            )}. EPS range:{" "}
+            {formatNumber(
+              data.forwardEstimates.epsLow
+            )}{" "}
+            to{" "}
+            {formatNumber(
+              data.forwardEstimates.epsHigh
+            )}.
           </p>
 
-          {data.priceTarget.lastUpdated && (
-            <p className="muted" style={{ fontSize: 10 }}>
-              Updated {data.priceTarget.lastUpdated}
-            </p>
-          )}
+          <p
+            className="muted"
+            style={{
+              margin: "8px 0 0",
+              fontSize: 10,
+            }}
+          >
+            Source: Business Quant analyst estimates
+          </p>
         </div>
       ) : (
-        <Unavailable text="Price-target consensus is unavailable for this symbol or your Finnhub plan." />
+        <Unavailable text="Forward EPS and revenue consensus estimates are unavailable for this symbol." />
       )}
 
       <p
@@ -311,7 +349,7 @@ export default function AnalystCenter({
           lineHeight: 1.5,
         }}
       >
-        Analyst opinions and price targets are estimates, can change, and are not guarantees of future performance.
+        Analyst recommendations and forward EPS/revenue estimates can change and are not guarantees of future performance.
       </p>
 
       <style jsx>{`
@@ -472,6 +510,40 @@ function formatCurrency(
     currency: "USD",
     maximumFractionDigits: 2,
   });
+}
+
+function formatNumber(
+  value: number | null
+) {
+  if (
+    value === null ||
+    !Number.isFinite(value)
+  ) {
+    return "N/A";
+  }
+
+  return value.toFixed(2);
+}
+
+function formatCompactCurrency(
+  value: number | null
+) {
+  if (
+    value === null ||
+    !Number.isFinite(value)
+  ) {
+    return "N/A";
+  }
+
+  return new Intl.NumberFormat(
+    "en-US",
+    {
+      style: "currency",
+      currency: "USD",
+      notation: "compact",
+      maximumFractionDigits: 2,
+    }
+  ).format(value);
 }
 
 function formatPercent(
