@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   useEffect,
   useRef,
+  useState,
 } from "react";
 
 export default function Hero() {
@@ -11,6 +12,16 @@ export default function Hero() {
     useRef<HTMLElement | null>(
       null
     );
+
+  const socialMenuRef =
+    useRef<HTMLDivElement | null>(
+      null
+    );
+
+  const [
+    socialMenuOpen,
+    setSocialMenuOpen,
+  ] = useState(false);
 
   useEffect(() => {
     const node =
@@ -52,6 +63,61 @@ export default function Hero() {
 
     return () => {
       observer.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    function handlePointerDown(
+      event: MouseEvent | TouchEvent
+    ) {
+      const target =
+        event.target as Node | null;
+
+      if (
+        target &&
+        socialMenuRef.current &&
+        !socialMenuRef.current.contains(
+          target
+        )
+      ) {
+        setSocialMenuOpen(false);
+      }
+    }
+
+    function handleKeyDown(
+      event: KeyboardEvent
+    ) {
+      if (event.key === "Escape") {
+        setSocialMenuOpen(false);
+      }
+    }
+
+    document.addEventListener(
+      "mousedown",
+      handlePointerDown
+    );
+    document.addEventListener(
+      "touchstart",
+      handlePointerDown
+    );
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handlePointerDown
+      );
+      document.removeEventListener(
+        "touchstart",
+        handlePointerDown
+      );
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
     };
   }, []);
 
@@ -113,6 +179,116 @@ export default function Hero() {
             >
               How it works
             </a>
+
+            <div
+              ref={socialMenuRef}
+              className="Norvexa-social-menu"
+              style={socialMenuWrapStyle}
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  setSocialMenuOpen(
+                    (current) =>
+                      !current
+                  )
+                }
+                aria-haspopup="menu"
+                aria-expanded={
+                  socialMenuOpen
+                }
+                style={followButtonStyle}
+              >
+                Follow Us
+                <span
+                  style={{
+                    ...followChevronStyle,
+                    transform:
+                      socialMenuOpen
+                        ? "rotate(180deg)"
+                        : "rotate(0deg)",
+                  }}
+                >
+                  ▾
+                </span>
+              </button>
+
+              {socialMenuOpen && (
+                <div
+                  role="menu"
+                  style={socialDropdownStyle}
+                >
+                  <a
+                    role="menuitem"
+                    href="https://www.instagram.com/norvexaai/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={socialItemStyle}
+                    onClick={() =>
+                      setSocialMenuOpen(
+                        false
+                      )
+                    }
+                  >
+                    <span style={socialIconStyle}>
+                      ◎
+                    </span>
+                    <span>
+                      Instagram
+                    </span>
+                    <span style={socialArrowStyle}>
+                      ↗
+                    </span>
+                  </a>
+
+                  <a
+                    role="menuitem"
+                    href="https://www.tiktok.com/@norvexaai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={socialItemStyle}
+                    onClick={() =>
+                      setSocialMenuOpen(
+                        false
+                      )
+                    }
+                  >
+                    <span style={socialIconStyle}>
+                      ♪
+                    </span>
+                    <span>
+                      TikTok
+                    </span>
+                    <span style={socialArrowStyle}>
+                      ↗
+                    </span>
+                  </a>
+
+                  <a
+                    role="menuitem"
+                    href="https://x.com/Norvexa_AI"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={socialItemStyle}
+                    onClick={() =>
+                      setSocialMenuOpen(
+                        false
+                      )
+                    }
+                  >
+                    <span style={socialIconStyle}>
+                      𝕏
+                    </span>
+                    <span>
+                      X / Twitter
+                    </span>
+                    <span style={socialArrowStyle}>
+                      ↗
+                    </span>
+                  </a>
+                </div>
+              )}
+            </div>
           </nav>
 
           <div style={navActionsStyle}>
@@ -132,6 +308,42 @@ export default function Hero() {
             </Link>
           </div>
         </header>
+
+        <div
+          className="Norvexa-mobile-socials"
+          style={mobileSocialRowStyle}
+        >
+          <span style={mobileSocialLabelStyle}>
+            Follow Norvexa
+          </span>
+
+          <a
+            href="https://www.instagram.com/norvexaai/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={mobileSocialLinkStyle}
+          >
+            Instagram
+          </a>
+
+          <a
+            href="https://www.tiktok.com/@norvexaai"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={mobileSocialLinkStyle}
+          >
+            TikTok
+          </a>
+
+          <a
+            href="https://x.com/Norvexa_AI"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={mobileSocialLinkStyle}
+          >
+            X
+          </a>
+        </div>
 
         <section
           className="Norvexa-hero"
@@ -678,9 +890,23 @@ export default function Hero() {
           }
         }
 
+        .Norvexa-mobile-socials {
+          display: none !important;
+        }
+
+        @media (max-width: 1120px) {
+          .desktop-nav {
+            gap: 20px !important;
+          }
+        }
+
         @media (max-width: 980px) {
           .desktop-nav {
             display: none !important;
+          }
+
+          .Norvexa-mobile-socials {
+            display: flex !important;
           }
         }
 
@@ -908,6 +1134,107 @@ const navLinkStyle = {
   color: "#9ca3af",
   fontSize: 13,
   fontWeight: 650,
+  textDecoration: "none",
+};
+
+const socialMenuWrapStyle = {
+  position: "relative" as const,
+};
+
+const followButtonStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  padding: 0,
+  border: "none",
+  background: "transparent",
+  color: "#9ca3af",
+  fontSize: 13,
+  fontWeight: 650,
+  fontFamily: "inherit",
+  cursor: "pointer",
+};
+
+const followChevronStyle = {
+  display: "inline-block",
+  color: "#60a5fa",
+  fontSize: 10,
+  transition:
+    "transform 160ms ease",
+};
+
+const socialDropdownStyle = {
+  position: "absolute" as const,
+  top: "calc(100% + 14px)",
+  right: 0,
+  zIndex: 50,
+  width: 190,
+  padding: 8,
+  border:
+    "1px solid rgba(255,255,255,0.1)",
+  borderRadius: 12,
+  background:
+    "rgba(7,17,31,0.98)",
+  boxShadow:
+    "0 18px 50px rgba(0,0,0,0.42)",
+  backdropFilter: "blur(16px)",
+};
+
+const socialItemStyle = {
+  display: "grid",
+  gridTemplateColumns:
+    "24px 1fr auto",
+  alignItems: "center",
+  gap: 8,
+  padding: "10px 10px",
+  borderRadius: 9,
+  color: "#d1d5db",
+  fontSize: 11,
+  fontWeight: 750,
+  textDecoration: "none",
+};
+
+const socialIconStyle = {
+  color: "#93c5fd",
+  fontSize: 13,
+  textAlign: "center" as const,
+};
+
+const socialArrowStyle = {
+  color: "#64748b",
+  fontSize: 10,
+};
+
+const mobileSocialRowStyle = {
+  display: "none",
+  alignItems: "center",
+  gap: 8,
+  flexWrap: "wrap" as const,
+  padding: "12px 0 0",
+};
+
+const mobileSocialLabelStyle = {
+  marginRight: 2,
+  color: "#64748b",
+  fontSize: 9,
+  fontWeight: 850,
+  letterSpacing: "0.08em",
+  textTransform:
+    "uppercase" as const,
+};
+
+const mobileSocialLinkStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "6px 9px",
+  border:
+    "1px solid rgba(96,165,250,0.16)",
+  borderRadius: 999,
+  background:
+    "rgba(37,99,235,0.05)",
+  color: "#93c5fd",
+  fontSize: 9,
+  fontWeight: 800,
   textDecoration: "none",
 };
 
