@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type CompetitorComparisonCenterProps = {
   symbol: string;
@@ -40,6 +41,12 @@ type ComparisonResponse = {
   peerSymbols: string[];
   winners: Record<string, string | null>;
   generatedAt: string;
+  source?: string;
+  peerGroup?: {
+    sector?: string | null;
+    industry?: string | null;
+    totalPeers?: number | null;
+  };
   error?: string;
 };
 
@@ -112,6 +119,8 @@ const metrics: MetricDefinition[] = [
 export default function CompetitorComparisonCenter({
   symbol,
 }: CompetitorComparisonCenterProps) {
+  const router = useRouter();
+
   const [data, setData] =
     useState<ComparisonResponse | null>(
       null
@@ -131,11 +140,11 @@ export default function CompetitorComparisonCenter({
 
   useEffect(() => {
     loadComparison();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol]);
 
   async function loadComparison(
-    manual = false,
-    customPeers = ""
+    manual = false
   ) {
     try {
       manual
@@ -146,24 +155,37 @@ export default function CompetitorComparisonCenter({
 
       const params =
         new URLSearchParams({
-          symbol,
+          symbol:
+            symbol
+              .trim()
+              .toUpperCase(),
           refresh:
             Date.now().toString(),
         });
 
-      if (customPeers.trim()) {
-        params.set(
-          "peers",
-          customPeers
+      const response =
+        await fetch(
+          `/api/stock-competitors?${params.toString()}`,
+          {
+            cache:
+              "no-store",
+          }
+        );
+
+      const contentType =
+        response.headers.get(
+          "content-type"
+        ) || "";
+
+      if (
+        !contentType.includes(
+          "application/json"
+        )
+      ) {
+        throw new Error(
+          "Competitor comparison returned an unexpected response."
         );
       }
-
-      const response = await fetch(
-        `/api/stock-competitors?${params.toString()}`,
-        {
-          cache: "no-store",
-        }
-      );
 
       const result =
         (await response.json()) as ComparisonResponse;
@@ -175,7 +197,77 @@ export default function CompetitorComparisonCenter({
         );
       }
 
-      setData(result);
+      const normalizedCompanies =
+        Array.isArray(
+          result.companies
+        )
+          ? result.companies.filter(
+              isValidCompany
+            )
+          : [];
+
+      if (
+        normalizedCompanies.length ===
+        0
+      ) {
+        throw new Error(
+          "No comparison data was available."
+        );
+      }
+
+      const baseSymbol =
+        symbol
+          .trim()
+          .toUpperCase();
+
+      const baseCompany =
+        normalizedCompanies.find(
+          (company) =>
+            company.symbol
+              .trim()
+              .toUpperCase() ===
+            baseSymbol
+        );
+
+      if (!baseCompany) {
+        throw new Error(
+          `Unable to locate ${baseSymbol} in the comparison results.`
+        );
+      }
+
+      /*
+       * Always keep the selected stock first
+       * even if the API changes its ordering.
+       */
+      const orderedCompanies = [
+        baseCompany,
+        ...normalizedCompanies.filter(
+          (company) =>
+            company.symbol
+              .trim()
+              .toUpperCase() !==
+            baseSymbol
+        ),
+      ];
+
+      setData({
+        ...result,
+        companies:
+          orderedCompanies,
+        winners:
+          result.winners || {},
+        peerSymbols:
+          Array.isArray(
+            result.peerSymbols
+          )
+            ? result.peerSymbols
+            : orderedCompanies
+                .slice(1)
+                .map(
+                  (company) =>
+                    company.symbol
+                ),
+      });
     } catch (loadError) {
       setError(
         loadError instanceof Error
@@ -193,16 +285,83 @@ export default function CompetitorComparisonCenter({
   ) {
     event.preventDefault();
 
-    loadComparison(
-      true,
+    const requested =
       peerInput
+        .split(",")
+        .map(
+          (value) =>
+            value
+              .trim()
+              .toUpperCase()
+        )
+        .filter(Boolean);
+
+    const firstPeer =
+      requested[0] || "";
+
+    if (!firstPeer) {
+      setError(
+        "Enter a ticker to compare."
+      );
+      return;
+    }
+
+    if (
+      !/^[A-Z0-9.-]{1,15}$/.test(
+        firstPeer
+      )
+    ) {
+      setError(
+        "Enter a valid ticker symbol."
+      );
+      return;
+    }
+
+    if (
+      firstPeer ===
+      symbol
+        .trim()
+        .toUpperCase()
+    ) {
+      setError(
+        "Choose a different stock to compare."
+      );
+      return;
+    }
+
+    /*
+     * The dedicated Compare page is now
+     * working with direct Business Quant
+     * data, so custom peer comparisons
+     * should use that route instead of
+     * forcing the stock-page peer endpoint
+     * to reload a custom universe.
+     */
+    router.push(
+      `/compare?left=${encodeURIComponent(
+        symbol
+          .trim()
+          .toUpperCase()
+      )}&right=${encodeURIComponent(
+        firstPeer
+      )}`
     );
   }
 
   const companies =
     data?.companies || [];
 
-  const baseCompany = companies[0];
+  const baseCompany =
+    companies.find(
+      (company) =>
+        company.symbol
+          .trim()
+          .toUpperCase() ===
+        symbol
+          .trim()
+          .toUpperCase()
+    ) ||
+    companies[0];
 
   const strongestCompany =
     useMemo(() => {
@@ -211,27 +370,39 @@ export default function CompetitorComparisonCenter({
       }
 
       const counts =
-        new Map<string, number>();
+        new Map<
+          string,
+          number
+        >();
 
       Object.values(
-        data.winners
-      ).forEach((winner) => {
-        if (!winner) {
-          return;
+        data.winners || {}
+      ).forEach(
+        (winner) => {
+          if (!winner) {
+            return;
+          }
+
+          counts.set(
+            winner,
+            (counts.get(
+              winner
+            ) || 0) +
+              1
+          );
         }
+      );
 
-        counts.set(
-          winner,
-          (counts.get(winner) || 0) +
-            1
-        );
-      });
-
-      return Array.from(
-        counts.entries()
-      ).sort(
-        (a, b) => b[1] - a[1]
-      )[0]?.[0] || null;
+      return (
+        Array.from(
+          counts.entries()
+        ).sort(
+          (a, b) =>
+            b[1] -
+            a[1]
+        )[0]?.[0] ||
+        null
+      );
     }, [data]);
 
   if (loading) {
@@ -245,14 +416,16 @@ export default function CompetitorComparisonCenter({
         </h2>
 
         <p className="muted">
-          Gathering peer-company quotes
-          and fundamentals.
+          Gathering peer-company quotes and fundamentals.
         </p>
       </section>
     );
   }
 
-  if (error && !data) {
+  if (
+    error &&
+    !data
+  ) {
     return (
       <section
         className="card"
@@ -260,7 +433,8 @@ export default function CompetitorComparisonCenter({
       >
         <h2
           style={{
-            color: "#ff8a8a",
+            color:
+              "#ff8a8a",
           }}
         >
           Competitor Comparison unavailable
@@ -269,11 +443,29 @@ export default function CompetitorComparisonCenter({
         <p className="muted">
           {error}
         </p>
+
+        <button
+          type="button"
+          onClick={() =>
+            loadComparison(
+              true
+            )
+          }
+          style={{
+            ...secondaryButtonStyle,
+            marginTop: 12,
+          }}
+        >
+          Retry
+        </button>
       </section>
     );
   }
 
-  if (!data || !baseCompany) {
+  if (
+    !data ||
+    !baseCompany
+  ) {
     return null;
   }
 
@@ -292,34 +484,56 @@ export default function CompetitorComparisonCenter({
             Peer intelligence
           </p>
 
-          <h2 style={{ margin: 0 }}>
+          <h2
+            style={{
+              margin: 0,
+            }}
+          >
             Competitor Comparison
           </h2>
 
           <p
             className="muted"
             style={{
-              margin: "7px 0 0",
+              margin:
+                "7px 0 0",
               fontSize: 12,
             }}
           >
-            Compare {symbol} with
-            automatically selected peers
-            or enter your own tickers.
+            Compare {symbol} with automatically selected peers or open a direct two-stock comparison.
           </p>
+
+          {data.peerGroup?.industry && (
+            <p
+              className="muted"
+              style={{
+                margin:
+                  "5px 0 0",
+                fontSize: 10,
+              }}
+            >
+              Peer group:{" "}
+              {data.peerGroup.industry}
+            </p>
+          )}
         </div>
 
         <button
           type="button"
           onClick={() =>
-            loadComparison(true)
+            loadComparison(
+              true
+            )
           }
-          disabled={refreshing}
+          disabled={
+            refreshing
+          }
           style={{
             ...secondaryButtonStyle,
-            opacity: refreshing
-              ? 0.65
-              : 1,
+            opacity:
+              refreshing
+                ? 0.65
+                : 1,
           }}
         >
           {refreshing
@@ -335,9 +549,12 @@ export default function CompetitorComparisonCenter({
       )}
 
       <form
-        onSubmit={submitPeers}
+        onSubmit={
+          submitPeers
+        }
         style={{
-          display: "grid",
+          display:
+            "grid",
           gridTemplateColumns:
             "1fr auto",
           gap: 9,
@@ -345,29 +562,49 @@ export default function CompetitorComparisonCenter({
         }}
       >
         <input
-          value={peerInput}
-          onChange={(event) =>
+          value={
+            peerInput
+          }
+          onChange={(
+            event
+          ) =>
             setPeerInput(
-              event.target.value
+              event.target
+                .value
                 .toUpperCase()
             )
           }
-          placeholder="Custom peers, e.g. MSFT,GOOGL,META"
+          placeholder="Compare directly, e.g. MSFT"
           style={inputStyle}
         />
 
         <button
           type="submit"
-          style={primaryButtonStyle}
+          style={
+            primaryButtonStyle
+          }
         >
           Compare
         </button>
       </form>
 
+      {companies.length ===
+        1 && (
+        <div
+          style={{
+            ...warningStyle,
+            marginTop: 14,
+          }}
+        >
+          Norvexa loaded {baseCompany.symbol}, but no additional automatic peers were returned. You can still enter a ticker above for a direct comparison.
+        </div>
+      )}
+
       <div
         className="company-card-grid"
         style={{
-          display: "grid",
+          display:
+            "grid",
           gridTemplateColumns:
             `repeat(${Math.max(
               companies.length,
@@ -375,15 +612,27 @@ export default function CompetitorComparisonCenter({
             )}, minmax(210px, 1fr))`,
           gap: 10,
           marginTop: 16,
-          overflowX: "auto",
+          overflowX:
+            "auto",
         }}
       >
         {companies.map(
-          (company, index) => (
+          (
+            company,
+            index
+          ) => (
             <CompanyCard
-              key={company.symbol}
-              company={company}
-              primary={index === 0}
+              key={
+                company.symbol
+              }
+              company={
+                company
+              }
+              primary={
+                company.symbol ===
+                  baseCompany.symbol ||
+                index === 0
+              }
               strongest={
                 strongestCompany ===
                 company.symbol
@@ -395,43 +644,53 @@ export default function CompetitorComparisonCenter({
 
       <div
         style={{
-          overflowX: "auto",
+          overflowX:
+            "auto",
           marginTop: 16,
         }}
       >
         <div
           style={{
-            minWidth: Math.max(
-              760,
-              180 +
-                companies.length *
-                  145
-            ),
+            minWidth:
+              Math.max(
+                760,
+                180 +
+                  companies.length *
+                    145
+              ),
           }}
         >
           <div
             style={{
-              display: "grid",
+              display:
+                "grid",
               gridTemplateColumns:
                 `180px repeat(${companies.length}, minmax(135px, 1fr))`,
               gap: 8,
               padding:
                 "0 10px 10px",
-              color: "#9ca3af",
+              color:
+                "#9ca3af",
               fontSize: 10,
               fontWeight: 800,
               textTransform:
                 "uppercase",
             }}
           >
-            <span>Metric</span>
+            <span>
+              Metric
+            </span>
 
             {companies.map(
               (company) => (
                 <span
-                  key={company.symbol}
+                  key={
+                    company.symbol
+                  }
                 >
-                  {company.symbol}
+                  {
+                    company.symbol
+                  }
                 </span>
               )
             )}
@@ -440,15 +699,20 @@ export default function CompetitorComparisonCenter({
           {metrics.map(
             (metric) => (
               <ComparisonRow
-                key={metric.key}
-                metric={metric}
+                key={
+                  metric.key
+                }
+                metric={
+                  metric
+                }
                 companies={
                   companies
                 }
                 winner={
-                  data.winners[
-                    metric.winnerKey
-                  ]
+                  data.winners?.[
+                    metric
+                      .winnerKey
+                  ] || null
                 }
               />
             )
@@ -456,10 +720,15 @@ export default function CompetitorComparisonCenter({
         </div>
       </div>
 
-      <div style={educationPanelStyle}>
+      <div
+        style={
+          educationPanelStyle
+        }
+      >
         <strong
           style={{
-            color: "#f9a8d4",
+            color:
+              "#f9a8d4",
           }}
         >
           How to interpret this comparison
@@ -468,22 +737,28 @@ export default function CompetitorComparisonCenter({
         <p
           className="muted"
           style={{
-            margin: "7px 0 0",
+            margin:
+              "7px 0 0",
             fontSize: 11,
             lineHeight: 1.6,
           }}
         >
-          Highlighted cells show the
-          strongest visible value for each
-          metric. A lower P/E or
-          debt-to-equity ratio is not
-          automatically better, and a
-          higher margin or ROE does not
-          guarantee future performance.
-          Different industries can also
-          have very different normal
-          ranges.
+          Highlighted cells show the strongest visible value for each metric. A lower P/E or debt-to-equity ratio is not automatically better, and a higher margin or ROE does not guarantee future performance. Different industries can also have very different normal ranges.
         </p>
+
+        {data.source && (
+          <p
+            className="muted"
+            style={{
+              margin:
+                "8px 0 0",
+              fontSize: 10,
+            }}
+          >
+            Source:{" "}
+            {data.source}
+          </p>
+        )}
       </div>
 
       <style jsx>{`
@@ -497,7 +772,10 @@ export default function CompetitorComparisonCenter({
             grid-template-columns:
               repeat(
                 ${companies.length},
-                minmax(230px, 1fr)
+                minmax(
+                  230px,
+                  1fr
+                )
               ) !important;
           }
         }
@@ -511,7 +789,8 @@ function CompanyCard({
   primary,
   strongest,
 }: {
-  company: CompanyComparison;
+  company:
+    CompanyComparison;
   primary: boolean;
   strongest: boolean;
 }) {
@@ -520,31 +799,38 @@ function CompanyCard({
       style={{
         ...panelStyle,
         minWidth: 210,
-        border: primary
-          ? "1px solid rgba(96,165,250,0.35)"
-          : strongest
-            ? "1px solid rgba(236,72,153,0.35)"
-            : panelStyle.border,
+        border:
+          primary
+            ? "1px solid rgba(96,165,250,0.35)"
+            : strongest
+              ? "1px solid rgba(236,72,153,0.35)"
+              : panelStyle.border,
       }}
     >
       <div
         style={{
-          display: "flex",
+          display:
+            "flex",
           gap: 10,
-          alignItems: "center",
+          alignItems:
+            "center",
         }}
       >
         {company.logo ? (
           <img
-            src={company.logo}
+            src={
+              company.logo
+            }
             alt={`${company.name} logo`}
             style={{
               width: 40,
               height: 40,
-              objectFit: "contain",
+              objectFit:
+                "contain",
               borderRadius: 9,
               padding: 5,
-              background: "white",
+              background:
+                "white",
             }}
           />
         ) : (
@@ -553,13 +839,16 @@ function CompanyCard({
               width: 40,
               height: 40,
               borderRadius: 9,
-              display: "flex",
-              alignItems: "center",
+              display:
+                "flex",
+              alignItems:
+                "center",
               justifyContent:
                 "center",
               background:
                 "rgba(236,72,153,0.1)",
-              color: "#f9a8d4",
+              color:
+                "#f9a8d4",
               fontWeight: 850,
             }}
           >
@@ -574,8 +863,10 @@ function CompanyCard({
           <Link
             href={`/stock/${company.symbol}`}
             style={{
-              color: "white",
-              textDecoration: "none",
+              color:
+                "white",
+              textDecoration:
+                "none",
               fontWeight: 850,
             }}
           >
@@ -585,7 +876,8 @@ function CompanyCard({
           <p
             className="muted"
             style={{
-              margin: "3px 0 0",
+              margin:
+                "3px 0 0",
               fontSize: 9,
             }}
           >
@@ -600,7 +892,8 @@ function CompanyCard({
 
       <strong
         style={{
-          display: "block",
+          display:
+            "block",
           marginTop: 13,
           fontSize: 21,
         }}
@@ -612,7 +905,8 @@ function CompanyCard({
 
       <span
         style={{
-          display: "block",
+          display:
+            "block",
           marginTop: 5,
           color:
             company.changePercent >=
@@ -636,29 +930,38 @@ function ComparisonRow({
   companies,
   winner,
 }: {
-  metric: MetricDefinition;
-  companies: CompanyComparison[];
-  winner: string | null;
+  metric:
+    MetricDefinition;
+  companies:
+    CompanyComparison[];
+  winner:
+    string | null;
 }) {
   return (
     <div
       style={{
-        display: "grid",
+        display:
+          "grid",
         gridTemplateColumns:
           `180px repeat(${companies.length}, minmax(135px, 1fr))`,
         gap: 8,
         padding: 10,
         borderTop:
           "1px solid rgba(255,255,255,0.07)",
-        alignItems: "center",
+        alignItems:
+          "center",
       }}
     >
-      <strong>{metric.label}</strong>
+      <strong>
+        {metric.label}
+      </strong>
 
       {companies.map(
         (company) => {
           const rawValue =
-            company[metric.key];
+            company[
+              metric.key
+            ];
 
           const value =
             typeof rawValue ===
@@ -667,30 +970,39 @@ function ComparisonRow({
               : null;
 
           const isWinner =
-            winner === company.symbol;
+            winner ===
+            company.symbol;
 
           return (
             <div
-              key={`${metric.key}-${company.symbol}`}
+              key={`${String(
+                metric.key
+              )}-${company.symbol}`}
               style={{
                 padding:
                   "8px 9px",
                 borderRadius: 8,
-                background: isWinner
-                  ? "rgba(236,72,153,0.1)"
-                  : "transparent",
-                border: isWinner
-                  ? "1px solid rgba(236,72,153,0.22)"
-                  : "1px solid transparent",
-                color: isWinner
-                  ? "#f9a8d4"
-                  : "#d1d5db",
-                fontWeight: isWinner
-                  ? 850
-                  : 600,
+                background:
+                  isWinner
+                    ? "rgba(236,72,153,0.1)"
+                    : "transparent",
+                border:
+                  isWinner
+                    ? "1px solid rgba(236,72,153,0.22)"
+                    : "1px solid transparent",
+                color:
+                  isWinner
+                    ? "#f9a8d4"
+                    : "#d1d5db",
+                fontWeight:
+                  isWinner
+                    ? 850
+                    : 600,
               }}
             >
-              {metric.format(value)}
+              {metric.format(
+                value
+              )}
             </div>
           );
         }
@@ -699,12 +1011,41 @@ function ComparisonRow({
   );
 }
 
+function isValidCompany(
+  value: unknown
+): value is CompanyComparison {
+  if (
+    !value ||
+    typeof value !==
+      "object"
+  ) {
+    return false;
+  }
+
+  const company =
+    value as Partial<CompanyComparison>;
+
+  return (
+    typeof company.symbol ===
+      "string" &&
+    company.symbol.trim()
+      .length > 0 &&
+    typeof company.price ===
+      "number" &&
+    Number.isFinite(
+      company.price
+    )
+  );
+}
+
 function formatCurrency(
   value: number | null
 ) {
   if (
     value === null ||
-    !Number.isFinite(value)
+    !Number.isFinite(
+      value
+    )
   ) {
     return "N/A";
   }
@@ -712,9 +1053,12 @@ function formatCurrency(
   return value.toLocaleString(
     "en-US",
     {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 2,
+      style:
+        "currency",
+      currency:
+        "USD",
+      maximumFractionDigits:
+        2,
     }
   );
 }
@@ -724,25 +1068,35 @@ function formatMarketCap(
 ) {
   if (
     value === null ||
-    !Number.isFinite(value)
+    !Number.isFinite(
+      value
+    )
   ) {
     return "N/A";
   }
 
   const dollars =
-    value < 10_000_000
-      ? value * 1_000_000
+    value <
+    10_000_000
+      ? value *
+        1_000_000
       : value;
 
   return new Intl.NumberFormat(
     "en-US",
     {
-      style: "currency",
-      currency: "USD",
-      notation: "compact",
-      maximumFractionDigits: 2,
+      style:
+        "currency",
+      currency:
+        "USD",
+      notation:
+        "compact",
+      maximumFractionDigits:
+        2,
     }
-  ).format(dollars);
+  ).format(
+    dollars
+  );
 }
 
 function formatNumber(
@@ -750,12 +1104,16 @@ function formatNumber(
 ) {
   if (
     value === null ||
-    !Number.isFinite(value)
+    !Number.isFinite(
+      value
+    )
   ) {
     return "N/A";
   }
 
-  return value.toFixed(2);
+  return value.toFixed(
+    2
+  );
 }
 
 function formatPercent(
@@ -763,12 +1121,16 @@ function formatPercent(
 ) {
   if (
     value === null ||
-    !Number.isFinite(value)
+    !Number.isFinite(
+      value
+    )
   ) {
     return "N/A";
   }
 
-  return `${value.toFixed(2)}%`;
+  return `${value.toFixed(
+    2
+  )}%`;
 }
 
 function formatSignedPercent(
@@ -776,12 +1138,18 @@ function formatSignedPercent(
 ) {
   if (
     value === null ||
-    !Number.isFinite(value)
+    !Number.isFinite(
+      value
+    )
   ) {
     return "N/A";
   }
 
-  return `${value >= 0 ? "+" : ""}${value.toFixed(
+  return `${
+    value >= 0
+      ? "+"
+      : ""
+  }${value.toFixed(
     2
   )}%`;
 }
@@ -796,15 +1164,19 @@ const headerStyle = {
   justifyContent:
     "space-between",
   gap: 12,
-  flexWrap: "wrap" as const,
+  flexWrap:
+    "wrap" as const,
 };
 
 const eyebrowStyle = {
-  margin: "0 0 6px",
-  color: "#f472b6",
+  margin:
+    "0 0 6px",
+  color:
+    "#f472b6",
   fontSize: 11,
   fontWeight: 800,
-  letterSpacing: "0.08em",
+  letterSpacing:
+    "0.08em",
   textTransform:
     "uppercase" as const,
 };
@@ -819,38 +1191,51 @@ const panelStyle = {
 };
 
 const inputStyle = {
-  width: "100%",
-  boxSizing: "border-box" as const,
-  padding: "10px 12px",
+  width:
+    "100%",
+  boxSizing:
+    "border-box" as const,
+  padding:
+    "10px 12px",
   border:
     "1px solid rgba(255,255,255,0.1)",
   borderRadius: 9,
   background:
     "rgba(255,255,255,0.025)",
-  color: "white",
-  outline: "none",
+  color:
+    "white",
+  outline:
+    "none",
 };
 
 const primaryButtonStyle = {
-  padding: "10px 14px",
-  border: "none",
+  padding:
+    "10px 14px",
+  border:
+    "none",
   borderRadius: 9,
-  background: "#db2777",
-  color: "white",
+  background:
+    "#db2777",
+  color:
+    "white",
   fontWeight: 800,
-  cursor: "pointer",
+  cursor:
+    "pointer",
 };
 
 const secondaryButtonStyle = {
-  padding: "9px 12px",
+  padding:
+    "9px 12px",
   border:
     "1px solid rgba(255,255,255,0.11)",
   borderRadius: 9,
   background:
     "rgba(255,255,255,0.035)",
-  color: "#d1d5db",
+  color:
+    "#d1d5db",
   fontWeight: 750,
-  cursor: "pointer",
+  cursor:
+    "pointer",
 };
 
 const errorStyle = {
@@ -861,8 +1246,22 @@ const errorStyle = {
   borderRadius: 10,
   background:
     "rgba(255,107,107,0.07)",
-  color: "#ff8a8a",
+  color:
+    "#ff8a8a",
   fontSize: 11,
+};
+
+const warningStyle = {
+  padding: 12,
+  border:
+    "1px solid rgba(250,204,21,0.24)",
+  borderRadius: 10,
+  background:
+    "rgba(250,204,21,0.06)",
+  color:
+    "#facc15",
+  fontSize: 11,
+  lineHeight: 1.5,
 };
 
 const educationPanelStyle = {
