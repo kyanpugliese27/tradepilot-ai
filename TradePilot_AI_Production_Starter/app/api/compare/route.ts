@@ -78,33 +78,79 @@ type AIComparison = {
   disclaimer: string;
 };
 
-type CompetitorCompany = {
-  symbol?: string;
+type BQQuote = {
+  ticker?: string;
   name?: string;
-  logo?: string;
+  name_short?: string;
+  exchange?: string;
   price?: number;
-  changePercent?: number;
-  marketCapitalization?: number | null;
-  peRatio?: number | null;
-  eps?: number | null;
-  netProfitMargin?: number | null;
-  grossMargin?: number | null;
-  operatingMargin?: number | null;
-  beta?: number | null;
-  dividendYield?: number | null;
-  priceToBook?: number | null;
-  currentRatio?: number | null;
-  debtToEquity?: number | null;
-  returnOnEquity?: number | null;
-  week52High?: number | null;
-  week52Low?: number | null;
+  pricechange?: number;
+  pricechange_pct?: number;
+  pricedate?: string;
+  currency?: string;
 };
 
-type CompetitorResponse = {
-  companies?: CompetitorCompany[];
-  peerSymbols?: string[];
-  generatedAt?: string;
-  error?: string;
+type BQPeerRow = {
+  ticker?: string;
+  companyname?: string;
+  companyname_short?: string;
+  sector?: string;
+  industry?: string;
+  "Market Cap"?: number;
+};
+
+type BQPeersResponse = {
+  metadata?: {
+    sector?: string;
+    industry?: string;
+  };
+  data?: BQPeerRow[];
+};
+
+type BQReportedValue = {
+  raw?: number | string | null;
+};
+
+type BQStatementValue = {
+  date?: string;
+  normalizedDate?: string;
+  reportedValue?: BQReportedValue;
+};
+
+type BQStatementSection = {
+  metadata?: {
+    name?: string;
+    name_short?: string;
+    slug?: string;
+  };
+  values?: BQStatementValue[];
+};
+
+type BQStatementCategory = {
+  sections?: Record<string, BQStatementSection>;
+};
+
+type BQStatementResponse = {
+  data?: Record<string, BQStatementCategory>;
+};
+
+type BQDividendResponse = {
+  metadata?: {
+    divyield?: number;
+  };
+};
+
+type BQHistoryResponse = {
+  data?: Array<{
+    high?: number;
+    low?: number;
+  }>;
+};
+
+type FetchResult = {
+  ok: boolean;
+  status: number | null;
+  data: unknown;
 };
 
 const openai = new OpenAI({
@@ -113,6 +159,8 @@ const openai = new OpenAI({
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+const REQUEST_TIMEOUT_MS = 9_000;
 
 const comparisonSchema = {
   type: "object",
@@ -172,10 +220,7 @@ export async function GET(
     } =
       await supabase.auth.getUser();
 
-    if (
-      userError ||
-      !user
-    ) {
+    if (userError || !user) {
       return NextResponse.json(
         {
           error:
@@ -183,6 +228,24 @@ export async function GET(
         },
         {
           status: 401,
+          headers:
+            noStoreHeaders(),
+        }
+      );
+    }
+
+    const apiKey =
+      process.env
+        .BUSINESSQUANT_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          error:
+            "BUSINESSQUANT_API_KEY is missing.",
+        },
+        {
+          status: 500,
           headers:
             noStoreHeaders(),
         }
@@ -204,12 +267,8 @@ export async function GET(
       );
 
     if (
-      !isValidSymbol(
-        leftSymbol
-      ) ||
-      !isValidSymbol(
-        rightSymbol
-      )
+      !isValidSymbol(leftSymbol) ||
+      !isValidSymbol(rightSymbol)
     ) {
       return NextResponse.json(
         {
@@ -241,25 +300,32 @@ export async function GET(
       );
     }
 
-    const origin =
-      request.nextUrl.origin;
-
+    /*
+     * IMPORTANT:
+     * Do not server-fetch Norvexa's own
+     * /api/stock-competitors route here.
+     *
+     * On Vercel preview deployments, a
+     * server-to-self request can be blocked
+     * by deployment protection even though
+     * the same URL works in the browser.
+     *
+     * Instead, load both stocks directly
+     * from Business Quant.
+     */
     const [left, right] =
       await Promise.all([
         loadCompanyBundle(
-          origin,
-          leftSymbol
+          leftSymbol,
+          apiKey
         ),
         loadCompanyBundle(
-          origin,
-          rightSymbol
+          rightSymbol,
+          apiKey
         ),
       ]);
 
-    if (
-      !left ||
-      !right
-    ) {
+    if (!left || !right) {
       return NextResponse.json(
         {
           error:
@@ -364,6 +430,10 @@ ${JSON.stringify(
         left,
         right,
         aiComparison,
+
+        source:
+          "Business Quant",
+
         generatedAt:
           new Date().toISOString(),
       },
@@ -395,137 +465,407 @@ ${JSON.stringify(
 }
 
 async function loadCompanyBundle(
-  origin: string,
-  symbol: string
+  symbol: string,
+  apiKey: string
 ): Promise<
   CompanyBundle | null
 > {
+  const quoteUrl =
+    new URL(
+      "https://data.businessquant.com/quotes"
+    );
+
+  quoteUrl.searchParams.set(
+    "ticker",
+    symbol
+  );
+
+  quoteUrl.searchParams.set(
+    "mode",
+    "snapshot"
+  );
+
+  quoteUrl.searchParams.set(
+    "api_key",
+    apiKey
+  );
+
+  const ratiosUrl =
+    new URL(
+      "https://data.businessquant.com/statements"
+    );
+
+  ratiosUrl.searchParams.set(
+    "ticker",
+    symbol
+  );
+
+  ratiosUrl.searchParams.set(
+    "statement",
+    "Ratios"
+  );
+
+  ratiosUrl.searchParams.set(
+    "frequency",
+    "TTM"
+  );
+
+  ratiosUrl.searchParams.set(
+    "period",
+    "5y"
+  );
+
+  ratiosUrl.searchParams.set(
+    "api_key",
+    apiKey
+  );
+
+  const dividendsUrl =
+    new URL(
+      "https://data.businessquant.com/dividends"
+    );
+
+  dividendsUrl.searchParams.set(
+    "ticker",
+    symbol
+  );
+
+  dividendsUrl.searchParams.set(
+    "mode",
+    "dps"
+  );
+
+  dividendsUrl.searchParams.set(
+    "api_key",
+    apiKey
+  );
+
+  const historyUrl =
+    new URL(
+      "https://data.businessquant.com/quotes"
+    );
+
+  historyUrl.searchParams.set(
+    "ticker",
+    symbol
+  );
+
+  historyUrl.searchParams.set(
+    "mode",
+    "eod"
+  );
+
+  historyUrl.searchParams.set(
+    "period",
+    "1y"
+  );
+
+  historyUrl.searchParams.set(
+    "limit",
+    "500"
+  );
+
+  historyUrl.searchParams.set(
+    "api_key",
+    apiKey
+  );
+
+  const peersUrl =
+    new URL(
+      "https://data.businessquant.com/peers"
+    );
+
+  peersUrl.searchParams.set(
+    "ticker",
+    symbol
+  );
+
+  peersUrl.searchParams.set(
+    "api_key",
+    apiKey
+  );
+
   const [
-    comparisonData,
-    newsData,
+    quoteResult,
+    ratiosResult,
+    dividendResult,
+    historyResult,
+    peersResult,
   ] =
     await Promise.all([
-      fetchJson(
-        `${origin}/api/stock-competitors?symbol=${encodeURIComponent(
-          symbol
-        )}`
+      fetchOptionalJson(
+        quoteUrl
       ),
 
-      fetchJson(
-        `${origin}/api/stock-news?symbol=${encodeURIComponent(
-          symbol
-        )}`
+      fetchOptionalJson(
+        ratiosUrl
+      ),
+
+      fetchOptionalJson(
+        dividendsUrl
+      ),
+
+      fetchOptionalJson(
+        historyUrl
+      ),
+
+      fetchOptionalJson(
+        peersUrl
       ),
     ]);
 
-  const companies =
+  const quoteRows =
     Array.isArray(
-      (
-        comparisonData as
-          | CompetitorResponse
-          | null
-      )?.companies
+      quoteResult.data
     )
       ? (
-          comparisonData as CompetitorResponse
-        ).companies || []
+          quoteResult.data as BQQuote[]
+        )
       : [];
 
-  const company =
-    companies.find(
+  const quote =
+    quoteRows.find(
       (item) =>
         normalizeSymbol(
-          item.symbol || ""
+          item.ticker || ""
         ) === symbol
     ) ||
-    companies[0] ||
+    quoteRows[0] ||
     null;
 
-  if (!company) {
+  if (
+    !quoteResult.ok ||
+    !quote ||
+    !Number.isFinite(
+      Number(
+        quote.price
+      )
+    )
+  ) {
     return null;
   }
 
-  const price =
+  const ratios =
+    isPlainObject(
+      ratiosResult.data
+    )
+      ? (
+          ratiosResult.data as BQStatementResponse
+        )
+      : null;
+
+  const dividends =
+    isPlainObject(
+      dividendResult.data
+    )
+      ? (
+          dividendResult.data as BQDividendResponse
+        )
+      : null;
+
+  const history =
+    isPlainObject(
+      historyResult.data
+    )
+      ? (
+          historyResult.data as BQHistoryResponse
+        )
+      : null;
+
+  const peers =
+    isPlainObject(
+      peersResult.data
+    )
+      ? (
+          peersResult.data as BQPeersResponse
+        )
+      : null;
+
+  const peerRows =
+    Array.isArray(
+      peers?.data
+    )
+      ? peers!.data!
+      : [];
+
+  const selfPeer =
+    peerRows.find(
+      (item) =>
+        normalizeSymbol(
+          item.ticker || ""
+        ) === symbol
+    ) || null;
+
+  const peerSymbols =
+    peerRows
+      .map(
+        (item) =>
+          normalizeSymbol(
+            item.ticker || ""
+          )
+      )
+      .filter(
+        (item) =>
+          isValidSymbol(
+            item
+          ) &&
+          item !== symbol
+      )
+      .slice(
+        0,
+        10
+      );
+
+  const currentPrice =
     finiteNumber(
-      company.price
+      quote.price
     );
 
   if (
-    price <= 0
+    currentPrice <= 0
   ) {
     return null;
   }
 
   const changePercent =
     finiteNumber(
-      company.changePercent
+      quote.pricechange_pct
     );
 
-  const denominator =
-    1 +
-    changePercent /
-      100;
+  const change =
+    finiteNumber(
+      quote.pricechange
+    );
 
   const previousClose =
-    denominator > 0
-      ? price /
-        denominator
-      : price;
+    currentPrice -
+    change;
 
-  const change =
-    price -
-    previousClose;
+  const highs =
+    Array.isArray(
+      history?.data
+    )
+      ? history!.data!
+          .map(
+            (row) =>
+              finiteOrNull(
+                row.high
+              )
+          )
+          .filter(
+            (
+              value
+            ): value is number =>
+              value !== null
+          )
+      : [];
 
-  const quote:
+  const lows =
+    Array.isArray(
+      history?.data
+    )
+      ? history!.data!
+          .map(
+            (row) =>
+              finiteOrNull(
+                row.low
+              )
+          )
+          .filter(
+            (
+              value
+            ): value is number =>
+              value !== null
+          )
+      : [];
+
+  const rawYield =
+    finiteOrNull(
+      dividends
+        ?.metadata
+        ?.divyield
+    );
+
+  const marketCap =
+    finiteOrNull(
+      selfPeer?.[
+        "Market Cap"
+      ]
+    );
+
+  const quoteBundle:
     StockQuote = {
     symbol,
 
     name:
-      company.name ||
+      quote.name ||
+      quote.name_short ||
+      selfPeer?.companyname ||
+      selfPeer
+        ?.companyname_short ||
       symbol,
 
     logo:
-      company.logo ||
       "",
 
-    price,
+    exchange:
+      quote.exchange ||
+      "",
+
+    industry:
+      selfPeer?.industry ||
+      peers?.metadata
+        ?.industry ||
+      "",
+
+    country:
+      "",
+
+    currency:
+      quote.currency ||
+      "USD",
+
+    website:
+      "",
+
+    marketCapitalization:
+      marketCap,
+
+    price:
+      currentPrice,
 
     change,
 
     changePercent,
 
     /*
-     * The competitor endpoint gives us
-     * current price and 52-week range, but
-     * not today's OHLC values. Keeping the
-     * current price here preserves the
-     * comparison-page contract without
-     * inventing intraday values.
+     * We do not invent today's OHLC.
+     * The comparison page contract
+     * requires these fields, so use
+     * current/previous values only as
+     * neutral placeholders.
      */
     high:
-      price,
+      currentPrice,
 
     low:
-      price,
+      currentPrice,
 
     open:
-      previousClose,
+      previousClose > 0
+        ? previousClose
+        : currentPrice,
 
-    previousClose,
+    previousClose:
+      previousClose > 0
+        ? previousClose
+        : currentPrice,
 
     timestamp:
       Math.floor(
         Date.now() /
           1000
       ),
-
-    marketCapitalization:
-      finiteOrNull(
-        company.marketCapitalization
-      ),
-
-    currency:
-      "USD",
 
     stale:
       false,
@@ -537,130 +877,170 @@ async function loadCompanyBundle(
 
     metrics: {
       peRatio:
-        finiteOrNull(
-          company.peRatio
+        latestMetric(
+          ratios,
+          [
+            "P/E Ratio",
+            "PE Ratio",
+            "Price to Earnings",
+            "Price Earnings Ratio",
+          ]
         ),
 
       eps:
-        finiteOrNull(
-          company.eps
+        latestMetric(
+          ratios,
+          [
+            "Diluted EPS",
+            "EPS Diluted",
+            "Earnings Per Share Diluted",
+            "Basic EPS",
+            "EPS",
+          ]
         ),
 
       netProfitMargin:
-        finiteOrNull(
-          company.netProfitMargin
+        normalizePercentMetric(
+          latestMetric(
+            ratios,
+            [
+              "Net Profit Margin",
+              "Net Margin",
+              "Profit Margin",
+            ]
+          )
         ),
 
       grossMargin:
-        finiteOrNull(
-          company.grossMargin
+        normalizePercentMetric(
+          latestMetric(
+            ratios,
+            [
+              "Gross Margin",
+              "Gross Profit Margin",
+            ]
+          )
         ),
 
       operatingMargin:
-        finiteOrNull(
-          company.operatingMargin
+        normalizePercentMetric(
+          latestMetric(
+            ratios,
+            [
+              "Operating Margin",
+              "Operating Profit Margin",
+            ]
+          )
         ),
 
       week52High:
-        finiteOrNull(
-          company.week52High
-        ),
+        highs.length > 0
+          ? Math.max(
+              ...highs
+            )
+          : null,
 
       week52Low:
-        finiteOrNull(
-          company.week52Low
-        ),
+        lows.length > 0
+          ? Math.min(
+              ...lows
+            )
+          : null,
 
       beta:
-        finiteOrNull(
-          company.beta
-        ),
+        null,
 
       dividendYield:
-        finiteOrNull(
-          company.dividendYield
-        ),
+        rawYield !== null
+          ? rawYield *
+            100
+          : null,
 
       marketCapitalization:
-        finiteOrNull(
-          company.marketCapitalization
-        ),
+        marketCap,
 
       priceToBook:
-        finiteOrNull(
-          company.priceToBook
+        latestMetric(
+          ratios,
+          [
+            "P/B Ratio",
+            "PB Ratio",
+            "Price to Book",
+            "Price Book Ratio",
+          ]
         ),
 
       currentRatio:
-        finiteOrNull(
-          company.currentRatio
+        latestMetric(
+          ratios,
+          [
+            "Current Ratio",
+          ]
         ),
 
       debtToEquity:
-        finiteOrNull(
-          company.debtToEquity
+        normalizeRatioMetric(
+          latestMetric(
+            ratios,
+            [
+              "Debt to Equity",
+              "Debt/Equity",
+              "Debt To Equity Ratio",
+              "Total Debt to Equity",
+            ]
+          )
         ),
 
       returnOnEquity:
-        finiteOrNull(
-          company.returnOnEquity
+        normalizePercentMetric(
+          latestMetric(
+            ratios,
+            [
+              "Return on Equity",
+              "ROE",
+            ]
+          )
         ),
     },
 
     peers:
-      Array.isArray(
-        (
-          comparisonData as
-            | CompetitorResponse
-            | null
-        )?.peerSymbols
-      )
-        ? (
-            comparisonData as CompetitorResponse
-          ).peerSymbols
-        : [],
+      peerSymbols,
 
     updatedAt:
-      typeof (
-        comparisonData as
-          | CompetitorResponse
-          | null
-      )?.generatedAt ===
-      "string"
-        ? (
-            comparisonData as CompetitorResponse
-          ).generatedAt
-        : new Date().toISOString(),
+      new Date().toISOString(),
   };
 
-  const news =
-    Array.isArray(
-      newsData?.articles
-    )
-      ? (
-          newsData.articles as NewsArticle[]
-        ).slice(
-          0,
-          5
-        )
-      : [];
+  /*
+   * News is optional for Compare.
+   * Leaving this empty prevents another
+   * internal server-to-self API request
+   * from breaking the entire comparison.
+   */
+  const news:
+    NewsArticle[] = [];
 
   return {
     symbol,
-    quote,
+    quote:
+      quoteBundle,
     fundamentals,
     news,
   };
 }
 
-async function fetchJson(
-  url: string
-): Promise<
-  Record<
-    string,
-    any
-  > | null
-> {
+async function fetchOptionalJson(
+  url: URL
+): Promise<FetchResult> {
+  const controller =
+    new AbortController();
+
+  const timeout =
+    setTimeout(
+      () =>
+        controller.abort(),
+      REQUEST_TIMEOUT_MS
+    );
+
   try {
     const response =
       await fetch(
@@ -669,16 +1049,15 @@ async function fetchJson(
           cache:
             "no-store",
 
+          signal:
+            controller.signal,
+
           headers: {
-            "Cache-Control":
-              "no-cache, no-store",
+            Accept:
+              "application/json",
           },
         }
       );
-
-    if (!response.ok) {
-      return null;
-    }
 
     const contentType =
       response.headers.get(
@@ -690,18 +1069,260 @@ async function fetchJson(
         "application/json"
       )
     ) {
-      return null;
+      return {
+        ok: false,
+        status:
+          response.status,
+        data: null,
+      };
     }
 
-    return (
-      await response.json()
-    ) as Record<
-      string,
-      any
-    >;
+    let data:
+      unknown = null;
+
+    try {
+      data =
+        await response.json();
+    } catch {
+      data = null;
+    }
+
+    return {
+      ok:
+        response.ok,
+
+      status:
+        response.status,
+
+      data,
+    };
   } catch {
+    return {
+      ok: false,
+      status: null,
+      data: null,
+    };
+  } finally {
+    clearTimeout(
+      timeout
+    );
+  }
+}
+
+function latestMetric(
+  response:
+    | BQStatementResponse
+    | null,
+  aliases: string[]
+): number | null {
+  const section =
+    findSectionByAliases(
+      response,
+      aliases
+    );
+
+  if (
+    !section ||
+    !Array.isArray(
+      section.values
+    )
+  ) {
     return null;
   }
+
+  const values =
+    [...section.values].sort(
+      (a, b) =>
+        metricDate(
+          b
+        ).localeCompare(
+          metricDate(a)
+        )
+    );
+
+  for (
+    const value
+    of values
+  ) {
+    const raw =
+      finiteOrNull(
+        value.reportedValue
+          ?.raw
+      );
+
+    if (
+      raw !== null
+    ) {
+      return raw;
+    }
+  }
+
+  return null;
+}
+
+function findSectionByAliases(
+  response:
+    | BQStatementResponse
+    | null,
+  aliases: string[]
+):
+  | BQStatementSection
+  | null {
+  if (
+    !response?.data
+  ) {
+    return null;
+  }
+
+  const normalizedAliases =
+    aliases.map(
+      normalizeKey
+    );
+
+  let fuzzyMatch:
+    | BQStatementSection
+    | null = null;
+
+  for (
+    const category
+    of Object.values(
+      response.data
+    )
+  ) {
+    for (
+      const [
+        sectionName,
+        section,
+      ]
+      of Object.entries(
+        category.sections ||
+          {}
+      )
+    ) {
+      const candidates =
+        [
+          section.metadata
+            ?.slug,
+          section.metadata
+            ?.name,
+          section.metadata
+            ?.name_short,
+          sectionName,
+        ]
+          .filter(
+            Boolean
+          )
+          .map(
+            (value) =>
+              normalizeKey(
+                String(
+                  value
+                )
+              )
+          );
+
+      if (
+        candidates.some(
+          (candidate) =>
+            normalizedAliases.includes(
+              candidate
+            )
+        )
+      ) {
+        return section;
+      }
+
+      if (
+        !fuzzyMatch &&
+        candidates.some(
+          (candidate) =>
+            normalizedAliases.some(
+              (alias) =>
+                candidate.includes(
+                  alias
+                ) ||
+                alias.includes(
+                  candidate
+                )
+            )
+        )
+      ) {
+        fuzzyMatch =
+          section;
+      }
+    }
+  }
+
+  return fuzzyMatch;
+}
+
+function metricDate(
+  value:
+    BQStatementValue
+) {
+  return (
+    value.normalizedDate ||
+    value.date ||
+    ""
+  ).slice(
+    0,
+    10
+  );
+}
+
+function normalizeKey(
+  value: string
+) {
+  return value
+    .toLowerCase()
+    .replace(
+      /\([^)]*\)/g,
+      ""
+    )
+    .replace(
+      /[^a-z0-9]+/g,
+      "-"
+    )
+    .replace(
+      /^-+|-+$/g,
+      ""
+    );
+}
+
+function normalizePercentMetric(
+  value:
+    | number
+    | null
+) {
+  if (
+    value === null
+  ) {
+    return null;
+  }
+
+  return Math.abs(
+    value
+  ) <= 1
+    ? value * 100
+    : value;
+}
+
+function normalizeRatioMetric(
+  value:
+    | number
+    | null
+) {
+  if (
+    value === null
+  ) {
+    return null;
+  }
+
+  return Math.abs(
+    value
+  ) > 20
+    ? value / 100
+    : value;
 }
 
 function finiteNumber(
@@ -751,6 +1372,22 @@ function isValidSymbol(
 ) {
   return /^[A-Z0-9.-]{1,15}$/.test(
     value
+  );
+}
+
+function isPlainObject(
+  value: unknown
+): value is Record<
+  string,
+  unknown
+> {
+  return Boolean(
+    value &&
+      typeof value ===
+        "object" &&
+      !Array.isArray(
+        value
+      )
   );
 }
 
