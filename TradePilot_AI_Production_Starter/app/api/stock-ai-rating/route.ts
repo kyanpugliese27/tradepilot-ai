@@ -1132,6 +1132,9 @@ Rules:
 
     return NextResponse.json(
       {
+        route: "stock-ai-rating",
+        version: "2026-08-26-v2",
+
         ...payload,
 
         aiExplanation,
@@ -1180,6 +1183,8 @@ Rules:
 
     return NextResponse.json(
       {
+        route: "stock-ai-rating",
+        version: "2026-08-26-v2",
         error:
           error instanceof Error
             ? error.message
